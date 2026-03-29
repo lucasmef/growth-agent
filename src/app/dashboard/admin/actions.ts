@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { promoteExperimentToProfileInputSchema } from "@/modules/profiles/application/profile.schemas";
+import { promoteExperimentRunToProfile } from "@/modules/profiles/application/profile.service";
 import { requirePlatformAdmin } from "@/modules/identity/application/require-app-user";
 import {
   createAdminLabWorkspaceInputSchema,
@@ -77,4 +79,20 @@ export async function stopExperimentRunAction(
   revalidatePath("/dashboard/admin");
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect("/dashboard/admin?admin=experiment-stopped");
+}
+
+export async function promoteExperimentToProfileAction(
+  experimentRunId: string,
+  formData: FormData,
+) {
+  const appUser = await requirePlatformAdmin();
+  const input = promoteExperimentToProfileInputSchema.parse({
+    name: formData.get("name"),
+    description: String(formData.get("description") ?? "").trim() || undefined,
+  });
+
+  await promoteExperimentRunToProfile(appUser.id, experimentRunId, input);
+
+  revalidatePath("/dashboard/admin");
+  redirect("/dashboard/admin?admin=profile-promoted");
 }

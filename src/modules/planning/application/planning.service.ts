@@ -141,6 +141,8 @@ Project niche: ${project.niche}
 Primary goal: ${project.strategy?.primaryGoal ?? "grow the profile"}
 Target audience: ${project.strategy?.targetAudience ?? "not provided"}
 Tone of voice: ${project.strategy?.toneOfVoice ?? "not provided"}
+Publication profile: ${project.publicationProfile?.name ?? "not assigned"}
+Profile planning preset: ${JSON.stringify(project.publicationProfile?.planningPreset ?? null)}
 Editorial rules: ${JSON.stringify(project.strategy?.editorialRules ?? [])}
 Banned topics: ${JSON.stringify(project.strategy?.bannedTopics ?? [])}
 Banned claims: ${JSON.stringify(project.strategy?.bannedClaims ?? [])}
@@ -163,6 +165,8 @@ Project niche: ${project.niche}
 Primary goal: ${project.strategy?.primaryGoal ?? "grow the profile"}
 Target audience: ${project.strategy?.targetAudience ?? "not provided"}
 Tone of voice: ${project.strategy?.toneOfVoice ?? "not provided"}
+Publication profile: ${project.publicationProfile?.name ?? "not assigned"}
+Profile planning preset: ${JSON.stringify(project.publicationProfile?.planningPreset ?? null)}
 Available pillars: ${JSON.stringify(project.pillars.map((pillar) => pillar.name))}
 Editorial rules: ${JSON.stringify(project.strategy?.editorialRules ?? [])}
 Banned topics: ${JSON.stringify(project.strategy?.bannedTopics ?? [])}

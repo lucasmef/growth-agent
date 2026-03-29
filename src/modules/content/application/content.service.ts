@@ -95,6 +95,8 @@ Project niche: ${project.niche}
 Primary goal: ${project.strategy?.primaryGoal ?? "grow audience"}
 Target audience: ${project.strategy?.targetAudience ?? "not provided"}
 Tone of voice: ${project.strategy?.toneOfVoice ?? "not provided"}
+Publication profile: ${project.publicationProfile?.name ?? "not assigned"}
+Profile publishing preset: ${JSON.stringify(project.publicationProfile?.publishingPreset ?? null)}
 Editorial rules: ${JSON.stringify(readStringList(project.strategy?.editorialRules))}
 Banned topics: ${JSON.stringify(readStringList(project.strategy?.bannedTopics))}
 Banned claims: ${JSON.stringify(readStringList(project.strategy?.bannedClaims))}

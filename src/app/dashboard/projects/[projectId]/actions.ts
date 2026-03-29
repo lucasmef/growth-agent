@@ -19,6 +19,8 @@ import {
   generatePillarsForProject,
   generateWeeklyCalendarForProject,
 } from "@/modules/planning/application/planning.service";
+import { assignPublicationProfileInputSchema } from "@/modules/profiles/application/profile.schemas";
+import { assignPublicationProfileToProject } from "@/modules/profiles/application/profile.service";
 import {
   attachBundleUploadToContent,
   publishApprovedContentNowForUser,
@@ -154,4 +156,20 @@ export async function syncPublicationAction(projectId: string, contentItemId: st
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect(`/dashboard/projects/${projectId}?publishing=synced`);
+}
+
+export async function assignPublicationProfileAction(
+  projectId: string,
+  formData: FormData,
+) {
+  const appUser = await requireAppUser();
+  const input = assignPublicationProfileInputSchema.parse({
+    publicationProfileId:
+      String(formData.get("publicationProfileId") ?? "").trim() || null,
+  });
+
+  await assignPublicationProfileToProject(appUser.id, projectId, input);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?profile=assigned`);
 }

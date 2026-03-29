@@ -6,10 +6,12 @@ import {
   listAdminLabWorkspacesForUser,
 } from "@/modules/admin-lab/application/admin-lab.service";
 import { requirePlatformAdmin } from "@/modules/identity/application/require-app-user";
+import { listPublicationProfilesForAdmin } from "@/modules/profiles/application/profile.service";
 
 import {
   createAdminLabWorkspaceAction,
   createExperimentProjectAction,
+  promoteExperimentToProfileAction,
   startExperimentRunAction,
   stopExperimentRunAction,
 } from "./actions";
@@ -26,6 +28,8 @@ function readAdminFlashMessage(value?: string) {
       return "Experimento iniciado com sucesso.";
     case "experiment-stopped":
       return "Experimento encerrado com sucesso.";
+    case "profile-promoted":
+      return "Experimento promovido para publication profile.";
     default:
       return null;
   }
@@ -50,6 +54,7 @@ export default async function AdminDashboardPage({
   const appUser = await requirePlatformAdmin().catch(() => redirect("/dashboard"));
 
   const workspaces = await listAdminLabWorkspacesForUser(appUser.id);
+  const profiles = await listPublicationProfilesForAdmin();
   const query = await searchParams;
   const runningExperiments = workspaces
     .flatMap((workspace) => workspace.projects)
@@ -95,6 +100,10 @@ export default async function AdminDashboardPage({
         <article className="card">
           <h2>Experimentos rodando</h2>
           <p>{runningExperiments.length}</p>
+        </article>
+        <article className="card">
+          <h2>Profiles ativos</h2>
+          <p>{profiles.filter((profile) => profile.status === "ACTIVE").length}</p>
         </article>
       </section>
 
@@ -209,26 +218,53 @@ export default async function AdminDashboardPage({
                           </div>
 
                           {!running ? (
-                            <form
-                              action={startExperimentRunAction.bind(null, project.id)}
-                              className="inline-form"
-                            >
-                              <input
-                                className="input"
-                                type="text"
-                                name="hypothesis"
-                                placeholder="Hooks curtos superam scripts longos"
-                              />
-                              <input
-                                className="input"
-                                type="text"
-                                name="objective"
-                                placeholder="Descobrir cadencia e formato vencedor"
-                              />
-                              <button className="button button-primary" type="submit">
-                                Iniciar experimento
-                              </button>
-                            </form>
+                            <>
+                              <form
+                                action={startExperimentRunAction.bind(null, project.id)}
+                                className="inline-form"
+                              >
+                                <input
+                                  className="input"
+                                  type="text"
+                                  name="hypothesis"
+                                  placeholder="Hooks curtos superam scripts longos"
+                                />
+                                <input
+                                  className="input"
+                                  type="text"
+                                  name="objective"
+                                  placeholder="Descobrir cadencia e formato vencedor"
+                                />
+                                <button className="button button-primary" type="submit">
+                                  Iniciar experimento
+                                </button>
+                              </form>
+
+                              {latestRun &&
+                              ["STOPPED", "COMPLETED", "PROMOTED"].includes(latestRun.status) ? (
+                                <form
+                                  action={promoteExperimentToProfileAction.bind(null, latestRun.id)}
+                                  className="inline-form"
+                                >
+                                  <input
+                                    className="input"
+                                    type="text"
+                                    name="name"
+                                    placeholder="Nome do publication profile"
+                                    required
+                                  />
+                                  <input
+                                    className="input"
+                                    type="text"
+                                    name="description"
+                                    placeholder="Descricao curta do padrao vencedor"
+                                  />
+                                  <button className="button button-secondary" type="submit">
+                                    Promover para profile
+                                  </button>
+                                </form>
+                              ) : null}
+                            </>
                           ) : (
                             <form
                               action={stopExperimentRunAction.bind(null, project.id)}
@@ -254,6 +290,38 @@ export default async function AdminDashboardPage({
             </article>
           ))
         )}
+      </section>
+
+      <section className="stack">
+        <article className="card">
+          <div className="card-header">
+            <div>
+              <p className="section-label">Publication Profiles</p>
+              <h2>Catalogo interno</h2>
+            </div>
+            <span className="pill">{profiles.length} itens</span>
+          </div>
+
+          <div className="stack-sm">
+            {profiles.length === 0 ? (
+              <p className="muted">Nenhum publication profile promovido ainda.</p>
+            ) : (
+              profiles.map((profile) => (
+                <div className="subcard" key={profile.id}>
+                  <div>
+                    <h3>{profile.name}</h3>
+                    <p className="muted">
+                      {profile.status} · slug {profile.slug}
+                    </p>
+                    <p className="muted">
+                      origem {profile.sourceProject?.name ?? "manual"} · atribuicoes {profile.assignedProjects.length}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </article>
       </section>
     </main>
   );

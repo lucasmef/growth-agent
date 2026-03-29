@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { isBundleConfigured, isDatabaseConfigured } from "@/lib/env";
 import { requireAppUser } from "@/modules/identity/application/require-app-user";
 import { getProjectForUser } from "@/modules/project/application/project.service";
+import { listActivePublicationProfiles } from "@/modules/profiles/application/profile.service";
 import {
   approveContentAction,
   attachBundleAssetAction,
+  assignPublicationProfileAction,
   ensureBundleTeamAction,
   generateDraftForSlotAction,
   generatePillarsAction,
@@ -37,6 +39,7 @@ export default async function ProjectDetailsPage({
     planning?: string;
     content?: string;
     publishing?: string;
+    profile?: string;
   }>;
 }) {
   if (!isDatabaseConfigured()) {
@@ -54,6 +57,8 @@ export default async function ProjectDetailsPage({
   } catch {
     notFound();
   }
+
+  const activeProfiles = await listActivePublicationProfiles();
 
   const contentBySlotId = new Map(
     project.contentItems
@@ -76,10 +81,12 @@ export default async function ProjectDetailsPage({
         </div>
       </section>
 
-      {query.bundle || query.planning || query.content || query.publishing ? (
+      {query.bundle || query.planning || query.content || query.publishing || query.profile ? (
         <section className="flash-banner">
           <p>
-            {query.publishing === "asset-attached"
+            {query.profile === "assigned"
+              ? "Publication profile atualizado com sucesso."
+              : query.publishing === "asset-attached"
               ? "Asset anexado ao conteudo com sucesso."
               : query.publishing === "scheduled"
                 ? "Conteudo enviado para agendamento via bundle.social."
@@ -123,6 +130,41 @@ export default async function ProjectDetailsPage({
           <h2>bundle.social</h2>
           <p>{project.bundleTeamId ?? "Team ainda nao provisionado"}</p>
         </article>
+      </section>
+
+      <section className="card action-panel">
+        <div>
+          <p className="section-label">Publication Profile</p>
+          <h2>Padrao operacional escolhido</h2>
+          <p className="muted">
+            Use um profile validado no admin lab para orientar estrategia, planejamento e publicacao.
+          </p>
+        </div>
+
+        <form
+          action={assignPublicationProfileAction.bind(null, project.id)}
+          className="inline-form"
+        >
+          <select
+            className="input"
+            name="publicationProfileId"
+            defaultValue={project.publicationProfileId ?? ""}
+          >
+            <option value="">Sem profile</option>
+            {activeProfiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
+          <button className="button button-secondary" type="submit">
+            Salvar profile
+          </button>
+        </form>
+
+        <p className="helper-text">
+          Atual: {project.publicationProfile?.name ?? "nenhum profile associado"}
+        </p>
       </section>
 
       <section className="card action-panel">
