@@ -1,36 +1,70 @@
 import type {
-  BundleCreatePostInput,
-  BundlePostResult,
-} from "@/contracts";
+  SocialAccountCreatePortalLinkResponse,
+  TeamCreateTeamResponse,
+  TeamGetTeamResponse,
+  WebhookEvent,
+} from "bundlesocial";
 
-import { getEnv } from "@/lib/env";
+import { getAppUrl, getEnv } from "@/lib/env";
 
-const BUNDLE_BASE_URL = "https://api.bundle.social";
+import { getBundleClient } from "./bundle-client";
 
-async function bundleFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const env = getEnv();
+export async function createBundleTeam(name: string) {
+  const client = getBundleClient();
 
-  const response = await fetch(`${BUNDLE_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.BUNDLE_SOCIAL_API_KEY ?? ""}`,
-      ...init?.headers,
+  return client.team.teamCreateTeam({
+    requestBody: {
+      name,
     },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Bundle API request failed with status ${response.status}`);
-  }
-
-  return (await response.json()) as T;
+  }) as Promise<TeamCreateTeamResponse>;
 }
 
-export async function createBundlePost(
-  input: BundleCreatePostInput,
-): Promise<BundlePostResult> {
-  return bundleFetch<BundlePostResult>("/v1/post", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+export async function getBundleTeam(teamId: string) {
+  const client = getBundleClient();
+
+  return client.team.teamGetTeam({
+    id: teamId,
+  }) as Promise<TeamGetTeamResponse>;
+}
+
+export async function createBundlePortalLink(input: {
+  teamId: string;
+  socialAccountTypes: Array<"INSTAGRAM" | "TIKTOK">;
+  redirectUrl?: string;
+}) {
+  const client = getBundleClient();
+
+  return client.socialAccount.socialAccountCreatePortalLink({
+    requestBody: {
+      teamId: input.teamId,
+      redirectUrl:
+        input.redirectUrl ?? `${getAppUrl()}/dashboard?bundle=connected`,
+      socialAccountTypes: input.socialAccountTypes,
+      language: "pt",
+      disableAutoLogin: true,
+      showModalOnConnectSuccess: true,
+      expiresIn: 60,
+      withBusinessScope: true,
+      maxSocialAccountsConnected: 2,
+    },
+  }) as Promise<SocialAccountCreatePortalLinkResponse>;
+}
+
+export function constructBundleWebhookEvent(input: {
+  rawBody: string;
+  signature: string;
+}) {
+  const env = getEnv();
+
+  if (!env.BUNDLE_SOCIAL_WEBHOOK_SECRET) {
+    throw new Error("BUNDLE_SOCIAL_WEBHOOK_SECRET is not configured");
+  }
+
+  const client = getBundleClient();
+
+  return client.webhooks.constructEvent(
+    input.rawBody,
+    input.signature,
+    env.BUNDLE_SOCIAL_WEBHOOK_SECRET,
+  ) as WebhookEvent;
 }

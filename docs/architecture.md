@@ -265,6 +265,9 @@ trigger/
 - `POST /api/projects/:projectId/social-accounts/connect-link`
 - `GET /api/projects/:projectId/social-accounts`
 - `POST /api/projects/:projectId/social-accounts/:socialAccountId/refresh`
+- `POST /api/projects/:projectId/bundle/team`
+- `POST /api/projects/:projectId/social-accounts/portal-link`
+- `POST /api/projects/:projectId/social-accounts/sync`
 
 ### Conteúdo
 - `POST /api/projects/:projectId/content`

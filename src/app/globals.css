@@ -222,6 +222,23 @@ a {
   background: rgba(255, 255, 255, 0.5);
 }
 
+.flash-banner {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.flash-banner p {
+  margin: 0;
+  color: var(--accent-strong);
+}
+
+.action-panel {
+  margin-top: 24px;
+}
+
 .form-card {
   display: grid;
   gap: 18px;
