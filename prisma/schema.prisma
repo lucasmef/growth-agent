@@ -13,10 +13,30 @@ enum WorkspaceRole {
   MEMBER
 }
 
+enum PlatformRole {
+  USER
+  ADMIN
+}
+
+enum WorkspaceType {
+  CUSTOMER
+  ADMIN_LAB
+}
+
 enum ProjectStatus {
   ACTIVE
   PAUSED
   ARCHIVED
+}
+
+enum ProjectMode {
+  CLIENT_MANAGED
+  EXPERIMENT
+}
+
+enum ApprovalMode {
+  MANUAL_REQUIRED
+  AUTO_APPROVE
 }
 
 enum Platform {
@@ -122,22 +142,40 @@ enum AnalyticsScope {
   CONTENT_ITEM
 }
 
+enum PublicationProfileStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ExperimentRunStatus {
+  DRAFT
+  RUNNING
+  COMPLETED
+  FAILED
+  STOPPED
+  PROMOTED
+}
+
 model User {
   id             String            @id @default(cuid())
   email          String            @unique
   name           String?
   authProviderId String?           @unique
+  platformRole   PlatformRole      @default(USER)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   memberships    WorkspaceMember[]
   approvals      Approval[]
+  createdProfiles PublicationProfile[] @relation("PublicationProfileCreator")
 }
 
 model Workspace {
   id          String            @id @default(cuid())
   name        String
   slug        String            @unique
+  type        WorkspaceType     @default(CUSTOMER)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
@@ -164,13 +202,17 @@ model Project {
   name               String
   niche              String
   status             ProjectStatus       @default(ACTIVE)
+  mode               ProjectMode         @default(CLIENT_MANAGED)
+  approvalMode       ApprovalMode        @default(MANUAL_REQUIRED)
   timezone           String              @default("America/Sao_Paulo")
   bundleTeamId       String?             @unique
+  publicationProfileId String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
   workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   strategy           ProjectStrategy?
+  publicationProfile PublicationProfile? @relation("AssignedPublicationProfile", fields: [publicationProfileId], references: [id], onDelete: SetNull)
   socialAccounts     SocialAccount[]
   pillars            ContentPillar[]
   calendarWeeks      CalendarWeek[]
@@ -178,8 +220,11 @@ model Project {
   assets             Asset[]
   analyticsSnapshots AnalyticsSnapshot[]
   agentRuns          AgentRun[]
+  experimentRuns     ExperimentRun[]
+  sourcedProfiles    PublicationProfile[] @relation("PublicationProfileSourceProject")
 
   @@index([workspaceId])
+  @@index([mode, approvalMode])
 }
 
 model ProjectStrategy {
@@ -438,4 +483,53 @@ model WebhookEvent {
   @@index([provider, eventType])
   @@index([receivedAt])
   @@unique([provider, externalEventId])
+}
+
+model PublicationProfile {
+  id                String                   @id @default(cuid())
+  createdByUserId   String?
+  sourceProjectId   String?
+  name              String
+  slug              String                   @unique
+  description       String?
+  status            PublicationProfileStatus @default(DRAFT)
+  platformScope     Json?
+  strategyPreset    Json?
+  planningPreset    Json?
+  publishingPreset  Json?
+  guardrails        Json?
+  successCriteria   Json?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  createdBy         User?                    @relation("PublicationProfileCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  sourceProject     Project?                 @relation("PublicationProfileSourceProject", fields: [sourceProjectId], references: [id], onDelete: SetNull)
+  assignedProjects  Project[]                @relation("AssignedPublicationProfile")
+  experimentRuns    ExperimentRun[]
+
+  @@index([status])
+}
+
+model ExperimentRun {
+  id                  String              @id @default(cuid())
+  projectId           String
+  publicationProfileId String?
+  status              ExperimentRunStatus @default(DRAFT)
+  hypothesis          String?
+  objective           String?
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  promotedAt          DateTime?
+  summary             String?
+  baselineMetrics     Json?
+  resultMetrics       Json?
+  notes               Json?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  project             Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  publicationProfile  PublicationProfile? @relation(fields: [publicationProfileId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, status])
+  @@index([publicationProfileId, status])
 }

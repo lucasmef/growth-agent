@@ -1,19 +1,24 @@
 # Architecture Blueprint
 
-## 1. Visão geral
+## 1. Visao geral
 
-O `Growth Agent` V1 deve ser implementado como um `modular monolith` com dois runtimes:
+O `Growth Agent` continua como um `modular monolith`, mas agora com dois modos operacionais claros:
 
-- `Next.js`: UI, APIs, auth, leitura/escrita do domínio, dashboard e webhooks.
-- `Trigger.dev`: jobs assíncronos, cron, retries, backfill e observabilidade operacional.
+- `client managed`: projetos reais de clientes, com aprovacao humana obrigatoria;
+- `experiment`: projetos internos do time admin, usados para descobrir padroes vencedores.
 
-Integrações externas:
+Runtimes:
 
-- `bundle.social`: conexão de contas, scheduling, publishing, analytics, webhooks.
+- `Next.js`: UI, APIs, auth, leitura/escrita do dominio, dashboard e webhooks.
+- `Trigger.dev`: jobs assincronos, cron, retries, backfill e observabilidade operacional.
+
+Integracoes externas:
+
+- `bundle.social`: conexao de contas, scheduling, publishing, analytics, webhooks.
 - provider de IA via `AI SDK 6`.
 - auth via `Clerk`.
 
-Persistência:
+Persistencia:
 
 - `PostgreSQL` como source of truth.
 - `Prisma` como ORM principal.
@@ -21,30 +26,22 @@ Persistência:
 ## 2. Diagrama textual
 
 ```text
-User
-  -> Web App (Next.js)
-    -> Route Handlers / Server Actions
-      -> Application Services
-        -> Domain Modules
-          -> Prisma/PostgreSQL
-          -> AI Gateway
-          -> Bundle Gateway
-          -> Trigger Task Dispatcher
+Client User
+  -> Web App
+    -> project(mode=CLIENT_MANAGED, approvalMode=MANUAL_REQUIRED)
+      -> planning/content/review/publishing/analytics
 
-bundle.social
-  -> webhook /api/webhooks/bundle
-    -> verifier + idempotency
-      -> domain event mapping
-        -> update publication/account state
-        -> enqueue sync/recovery jobs
+Platform Admin
+  -> Admin Lab
+    -> workspace(type=ADMIN_LAB)
+      -> project(mode=EXPERIMENT, approvalMode=AUTO_APPROVE)
+        -> autonomous test loop
+        -> analytics evaluation
+        -> promote winning setup to PublicationProfile
 
-Trigger.dev
-  -> generate strategy
-  -> generate weekly calendar
-  -> generate drafts
-  -> schedule/publish approved content
-  -> sync analytics
-  -> generate optimization insights
+PublicationProfile
+  -> assigned to client projects
+  -> seeds strategy/planning/publishing defaults
 ```
 
 ## 3. Camadas
@@ -53,48 +50,46 @@ Trigger.dev
 
 Responsabilidades:
 - onboarding;
-- dashboard;
-- calendário;
-- review/approval;
-- project settings;
-- histórico e logs.
+- dashboard do cliente;
+- review e aprovacao;
+- admin lab;
+- catalogo de publication profiles.
 
 ### Application
 
 Responsabilidades:
 - coordenar use cases;
-- garantir idempotência de fluxos;
-- aplicar políticas de autorização;
-- chamar ports de infra.
+- garantir idempotencia;
+- aplicar autorizacao;
+- aplicar policy gates por modo do projeto.
 
 Use cases principais:
 - `CreateProject`
-- `ConnectSocialAccount`
-- `CompleteStrategicOnboarding`
+- `AssignPublicationProfile`
 - `GenerateContentPillars`
 - `GenerateWeeklyCalendar`
 - `GenerateContentDraft`
 - `ApproveContent`
-- `RequestContentChanges`
 - `ScheduleApprovedContent`
-- `PublishContentNow`
-- `SyncProjectAnalytics`
-- `GenerateOptimizationInsights`
+- `RunExperimentCycle`
+- `EvaluateExperiment`
+- `PromoteExperimentToProfile`
 
 ### Domain
 
 Responsabilidades:
 - entidades e enums;
 - regras de estado;
-- políticas editoriais;
-- validações de negócio;
-- score simplificado de performance.
+- politicas editoriais;
+- policy gates por tipo de projeto;
+- catalogo de profiles reutilizaveis.
 
 Regras centrais:
-- conteúdo só agenda/publica após aprovação;
-- publicação é sempre vinculada a um projeto e a uma conta social elegível;
-- analytics não altera conteúdo histórico, apenas gera snapshots e insights;
-- decisões do agente precisam ser logadas.
+- `CLIENT_MANAGED` exige `MANUAL_REQUIRED`;
+- `EXPERIMENT` pode usar `AUTO_APPROVE`, mas apenas em `ADMIN_LAB`;
+- `PublicationProfile` nao publica nada por si; ele apenas define o padrao operacional;
+- experimentos promovem profiles, e profiles podem ser aplicados a projetos de clientes;
+- decisoes do agente precisam ser logadas nos dois modos.
 
 ### Infrastructure
 
@@ -104,122 +99,119 @@ Responsabilidades:
 - adapters de IA;
 - adapter do `bundle.social`;
 - observabilidade;
-- gerenciamento de secrets.
+- secrets e feature flags.
 
-## 4. Serviços e módulos
+## 4. Servicos e modulos
 
 ### `identity`
-- autenticação;
-- sessão;
-- papéis básicos.
+- autenticacao;
+- sessao;
+- `platformRole`.
 
 ### `workspace`
-- organização do tenant;
-- membros e roles.
+- tenant;
+- membros e roles;
+- `workspace.type = CUSTOMER | ADMIN_LAB`.
 
 ### `project`
-- perfil do cliente/case;
-- vínculo com `bundleTeamId`;
-- contas sociais conectadas.
+- perfil gerenciado;
+- `mode = CLIENT_MANAGED | EXPERIMENT`;
+- `approvalMode = MANUAL_REQUIRED | AUTO_APPROVE`;
+- vinculo com `bundleTeamId`.
+
+### `profiles`
+- `PublicationProfile`;
+- presets de estrategia, planejamento e publicacao;
+- guardrails e success criteria.
+
+### `admin-lab`
+- criacao de contas e projetos de teste;
+- execucao de ciclos autonomos;
+- analise de resultado;
+- promocao para profile.
 
 ### `strategy`
 - nicho;
 - ICP;
 - objetivos;
 - tom de voz;
-- regras editoriais;
-- restrições.
+- restricoes.
 
 ### `planning`
 - pilares;
-- calendário semanal;
+- calendario semanal;
 - brief por slot.
 
 ### `content`
 - ideias;
-- content items;
-- versões de draft;
+- drafts;
+- versoes;
 - asset brief.
 
 ### `approval`
-- aprovação manual;
-- pedido de ajustes;
-- trilha de decisão humana.
+- aprovacao manual para cliente;
+- bypass controlado para experimento auto-aprovado.
 
 ### `publishing`
 - scheduling;
-- publicação;
-- reconciliação de status.
+- publicacao;
+- reconciliacao de status.
 
 ### `analytics`
 - snapshots por conta e por post;
-- métricas normalizadas;
-- histórico.
+- metricas normalizadas;
+- comparacao de experimentos.
 
 ### `agent-ops`
-- execuções;
-- logs de decisão;
+- execucoes;
+- logs de decisao;
 - prompt/model versioning;
 - observabilidade do agente.
 
 ## 5. Fluxos principais
 
-### Fluxo 1: onboarding do projeto
+### Fluxo 1: cliente com profile escolhido
 
-1. Usuário cria `workspace`.
-2. Usuário cria `project`.
-3. Sistema cria ou associa `bundleTeamId`.
-4. Usuário conecta Instagram e/ou TikTok.
-5. Usuário preenche onboarding estratégico.
-6. Job gera `ProjectStrategy`, pilares e recomendação inicial de calendário.
+1. Usuario cria `workspace`.
+2. Usuario cria `project`.
+3. Usuario escolhe um `publicationProfile` opcional.
+4. Sistema preenche defaults de estrategia, planejamento e publishing.
+5. Usuario conecta Instagram e/ou TikTok.
+6. Sistema gera plano, drafts e segue workflow manual.
 
-### Fluxo 2: planejamento semanal
+### Fluxo 2: experimento autonomo do admin
 
-1. Usuário dispara geração da semana.
-2. Job lê estratégia + analytics + histórico recente.
-3. Sistema gera `CalendarWeek` e `CalendarSlot`.
-4. Cada slot recebe objetivo, formato, plataforma e brief.
+1. `platform admin` cria `workspace.type = ADMIN_LAB`.
+2. Admin cria `project.mode = EXPERIMENT`.
+3. Projeto usa `approvalMode = AUTO_APPROVE`.
+4. Jobs geram calendario, drafts e agendamento automaticamente.
+5. Analytics entra por webhook e cron.
+6. Sistema consolida resultado do experimento em `ExperimentRun`.
 
-### Fluxo 3: geração e aprovação de post
+### Fluxo 3: promocao para publication profile
 
-1. Usuário ou cron dispara geração de draft.
-2. Job chama `AI Gateway` com schema estruturado.
-3. Sistema salva `ContentVersion`.
-4. Conteúdo entra em `DRAFT_READY`.
-5. Revisor aprova ou pede alterações.
-6. Ao aprovar, item pode ser agendado/publicado.
-
-### Fluxo 4: publicação
-
-1. Item aprovado recebe horário.
-2. Use case chama `BundleGateway.schedulePost`.
-3. Sistema salva `Publication`.
-4. Webhook ou polling atualiza status final.
-
-### Fluxo 5: analytics e otimização
-
-1. Cron diário e webhooks disparam sync.
-2. Sistema salva `AnalyticsSnapshot`.
-3. Job calcula insights simples.
-4. Próximo ciclo de planejamento consome esses sinais.
+1. Admin encerra um `ExperimentRun`.
+2. Sistema compara metricas vs baseline e success criteria.
+3. Admin promove o setup vencedor para `PublicationProfile`.
+4. O profile passa a aparecer para selecao em projetos de cliente.
 
 ## 6. Estrutura de pastas
 
 ```text
 src/
   app/
-    (marketing)/
-    (app)/
     api/
       projects/
       content/
       analytics/
+      admin/
       webhooks/
   modules/
+    identity/
+    workspace/
     project/
-      domain/
-      application/
-      infrastructure/
+    profiles/
+    admin-lab/
     strategy/
     planning/
     content/
@@ -229,12 +221,7 @@ src/
     agent-ops/
   integrations/
     ai/
-      ai-gateway.ts
-      providers/
     bundle/
-      bundle-gateway.ts
-      bundle-client.ts
-      bundle-webhook.ts
   contracts/
   lib/
 trigger/
@@ -244,184 +231,101 @@ trigger/
     content/
     publishing/
     analytics/
+    admin-lab/
     ops/
 ```
 
 ## 7. Endpoints principais
 
-### Auth e tenant
+### Cliente
 - `POST /api/workspaces`
-- `GET /api/workspaces/:workspaceId`
 - `POST /api/workspaces/:workspaceId/projects`
-
-### Project e onboarding
-- `GET /api/projects/:projectId`
-- `PATCH /api/projects/:projectId`
 - `PATCH /api/projects/:projectId/strategy`
 - `POST /api/projects/:projectId/pillars/generate`
 - `POST /api/projects/:projectId/calendar/generate`
-
-### Social accounts
-- `POST /api/projects/:projectId/social-accounts/connect-link`
-- `GET /api/projects/:projectId/social-accounts`
-- `POST /api/projects/:projectId/social-accounts/:socialAccountId/refresh`
-- `POST /api/projects/:projectId/bundle/team`
-- `POST /api/projects/:projectId/social-accounts/portal-link`
-- `POST /api/projects/:projectId/social-accounts/sync`
-
-### Conteúdo
-- `POST /api/projects/:projectId/content`
-- `GET /api/projects/:projectId/content`
-- `GET /api/content/:contentItemId`
-- `POST /api/content/:contentItemId/generate-draft`
 - `POST /api/projects/:projectId/calendar-slots/:slotId/draft/generate`
-- `POST /api/content/:contentItemId/request-changes`
 - `POST /api/content/:contentItemId/approve`
+- `POST /api/content/:contentItemId/request-changes`
 - `POST /api/content/:contentItemId/schedule`
 - `POST /api/content/:contentItemId/publish-now`
+- `POST /api/projects/:projectId/publication-profile`
 
-### Analytics
-- `GET /api/projects/:projectId/dashboard`
-- `GET /api/projects/:projectId/analytics`
-- `POST /api/projects/:projectId/analytics/sync`
+### Admin lab
+- `POST /api/admin/workspaces`
+- `POST /api/admin/projects`
+- `POST /api/admin/projects/:projectId/experiment/start`
+- `POST /api/admin/projects/:projectId/experiment/stop`
+- `POST /api/admin/experiments/:experimentRunId/evaluate`
+- `POST /api/admin/experiments/:experimentRunId/promote-profile`
+- `GET /api/admin/publication-profiles`
+- `POST /api/admin/publication-profiles`
+- `PATCH /api/admin/publication-profiles/:profileId`
 
 ### Webhooks
 - `POST /api/webhooks/bundle`
 
 ## 8. Jobs e crons
 
-Jobs:
-- `strategy.generate-project-strategy`
-- `strategy.generate-pillars`
+Jobs de cliente:
 - `planning.generate-weekly-calendar`
 - `content.generate-draft`
-- `content.regenerate-draft`
 - `publishing.schedule-approved-content`
-- `publishing.publish-now`
-- `publishing.reconcile-publication-status`
-- `analytics.sync-social-account`
 - `analytics.sync-post`
-- `analytics.backfill-project`
-- `analytics.generate-optimization-insights`
-- `ops.reprocess-stuck-items`
+
+Jobs de admin lab:
+- `admin-lab.bootstrap-experiment-project`
+- `admin-lab.run-autonomous-cycle`
+- `admin-lab.evaluate-experiment`
+- `admin-lab.promote-profile`
 
 Crons:
-- diário 06:00: sync de analytics recentes;
-- diário 07:00: reconciliação de publicações pendentes;
-- semanal domingo 18:00: gerar calendário da próxima semana;
-- horário: retry de itens falhados/transientes.
+- diario: sync de analytics recentes;
+- diario: reconciliacao de publicacoes pendentes;
+- semanal: gerar calendario da proxima semana;
+- horario: retry de itens falhados;
+- horario no admin lab: continuar experimentos em execucao.
 
-## 9. Eventos e webhooks
+## 9. Guardrails de IA
 
-Eventos internos:
-- `project.created`
-- `strategy.completed`
-- `pillars.generated`
-- `calendar.generated`
-- `content.draft.generated`
-- `content.approved`
-- `content.changes_requested`
-- `publication.scheduled`
-- `publication.published`
-- `publication.failed`
-- `analytics.synced`
-- `optimization.generated`
+- saida sempre em `JSON` estruturado por `Zod`;
+- prompts versionados e rastreaveis;
+- `AUTO_APPROVE` so pode existir em `ADMIN_LAB`;
+- profiles nao removem guardrails de plataforma;
+- limite de budget, volume e frequencia por projeto;
+- kill switch para desligar experimentos autonomos;
+- logs de insumo, decisao e publicacao para auditoria;
+- feature flag para liberar profiles aos clientes.
 
-Eventos externos esperados do `bundle.social`:
-- `socialAccount.connected`
-- `socialAccount.disconnected`
-- `post.scheduled`
-- `post.published`
-- `post.failed`
-- `analytics.updated`
+## 10. Criterios de aceite dessa extensao
 
-## 10. Guardrails de IA
+- existe `platform admin` separado de usuario comum;
+- existe `workspace.type = ADMIN_LAB`;
+- existe `project.mode = EXPERIMENT`;
+- experimento pode operar sem aprovacao humana;
+- experimento gera `ExperimentRun` com metricas e resumo;
+- admin pode promover um setup para `PublicationProfile`;
+- cliente pode associar um profile ao seu projeto;
+- projetos de cliente continuam exigindo aprovacao manual.
 
-- saída sempre em `JSON` estruturado por `Zod`;
-- prompts versionados e rastreáveis;
-- proibição de publicar sem aprovação;
-- validação por plataforma antes do agendamento;
-- checagem de duplicidade semântica contra últimos posts;
-- lista de tópicos banidos e claims proibidos por projeto;
-- limite de custo por job e por projeto;
-- fallback de provider/model configurável;
-- log de insumos usados na decisão do agente.
+## 11. Roadmap tecnico
 
-## 11. Critérios de aceite da V1
+### Fase A: fundacao de dominio
+- adicionar `platformRole`, `workspace.type`, `project.mode`, `approvalMode`;
+- adicionar `PublicationProfile` e `ExperimentRun`;
+- isolar autorizacao admin.
 
-- autenticação funcional com isolamento por workspace;
-- criação de projeto e conexão de ao menos uma conta social;
-- onboarding estratégico persistido;
-- geração de pilares;
-- geração de calendário semanal;
-- geração de draft com `hook`, `script`, `caption`, `CTA` e `hashtags`;
-- aprovação manual obrigatória antes de qualquer publicação;
-- scheduling/publicação via `bundle.social` com retry;
-- ingestão de analytics e dashboard básico;
-- logs de runs e decisões acessíveis para troubleshooting.
+### Fase B: admin lab
+- painel admin;
+- criacao de projetos de experimento;
+- fluxo autonomo com auto-approve;
+- analytics comparativo.
 
-## 12. Roadmap técnico por fases
+### Fase C: publication profiles
+- promocao de experimento vencedor;
+- catalogo de profiles;
+- atribuicao de profile a projeto de cliente.
 
-### Fase 0: fundação
-- scaffold do projeto;
-- auth;
-- schema e migrations;
-- observabilidade mínima;
-- adapters externos.
-
-### Fase 1: onboarding e estratégia
-- projeto;
-- contas sociais;
-- estratégia;
-- pilares.
-
-### Fase 2: planejamento e drafts
-- calendário semanal;
-- geração de slots;
-- geração de drafts;
-- review UI.
-
-### Fase 3: publishing
-- aprovação;
-- agendamento;
-- publicação;
-- reconciliação de estado.
-
-### Fase 4: analytics e otimização
-- snapshots;
-- dashboard;
-- insights do agente para próximo ciclo.
-
-### Fase 5: expansão
-- múltiplos perfis por workspace;
-- novas plataformas;
-- testes A/B;
-- agentes especializados.
-
-## 13. Riscos técnicos e mitigação
-
-- Dependência do `bundle.social`:
-  mitigar com `BundleGateway` e contrato interno estável.
-- Saída inconsistente de IA:
-  mitigar com schema estruturado, retries limitados e revisão humana.
-- Estados quebrados entre UI, jobs e webhooks:
-  mitigar com state machine simples, idempotência e reconciliação periódica.
-- Crescimento do monólito sem fronteiras:
-  mitigar com módulos, contratos e ADRs.
-- Analytics incompleto ou atrasado:
-  mitigar com snapshots, polling e backfill.
-
-## 14. Naming sugerido
-
-Produto:
-- `Growth Agent` como codinome;
-- possíveis nomes futuros: `Orbit Growth`, `SignalPilot`, `GrowthLoop`.
-
-Subdomínios:
-- `Strategy Engine`
-- `Planning Engine`
-- `Content Studio`
-- `Approval Desk`
-- `Publishing Hub`
-- `Analytics Hub`
-- `Agent Ops`
+### Fase D: optimization engine
+- score por profile;
+- recomendacao automatica de profile;
+- A/B entre profiles.

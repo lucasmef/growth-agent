@@ -1,14 +1,22 @@
 # Growth Agent
 
-Blueprint inicial da V1 do produto SaaS `Growth Agent`.
+Blueprint inicial do produto SaaS `Growth Agent`.
 
-Objetivo da V1:
-- planejar estratégia editorial para Instagram e TikTok;
+## Objetivo da V1
+
+- planejar estrategia editorial para Instagram e TikTok;
 - gerar ideias e drafts com IA;
-- exigir aprovação humana em 100% dos posts;
-- publicar/agendar via `bundle.social`;
+- exigir aprovacao humana em 100% dos posts de clientes;
+- publicar e agendar via `bundle.social`;
 - ingerir analytics via `bundle.social`;
-- otimizar o próximo ciclo de conteúdo com base no histórico.
+- otimizar o proximo ciclo de conteudo com base no historico.
+
+## Extensao de produto ja prevista
+
+- acesso de `platform admin` para operacao interna;
+- `admin lab` para rodar testes autonomos em contas novas;
+- promocao de testes vencedores para `publication profiles`;
+- clientes escolhendo um perfil operacional pronto para suas contas.
 
 ## Stack recomendada
 
@@ -17,7 +25,7 @@ Objetivo da V1:
 - `TypeScript`
 - `Clerk`
 - `Vercel AI SDK 6`
-- `Trigger.dev` estável
+- `Trigger.dev` estavel
 - `PostgreSQL`
 - `Prisma 6.x`
 - `bundle.social`
@@ -25,14 +33,14 @@ Objetivo da V1:
 - `Sentry`
 - `Vitest` + `Playwright`
 
-## Princípios
+## Principios
 
 - modular monolith na V1;
-- tudo em TypeScript quando possível;
+- tudo em TypeScript quando possivel;
 - baixo acoplamento a provider de IA e ao `bundle.social`;
-- aprovação humana obrigatória antes de publicar;
+- separacao explicita entre projetos de cliente e projetos de experimento;
 - jobs idempotentes com retry;
-- logs de decisão e outputs estruturados.
+- logs de decisao e outputs estruturados.
 
 ## Estrutura
 
@@ -40,6 +48,7 @@ Objetivo da V1:
 - [ADR 001 - Modular Monolith](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/001-modular-monolith.md)
 - [ADR 002 - Stack](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/002-stack.md)
 - [ADR 003 - Agent Runtime](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/003-agent-runtime.md)
+- [ADR 004 - Admin Lab and Publication Profiles](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/004-admin-lab-and-publication-profiles.md)
 - [Prisma Schema](C:/Users/lucas/OneDrive/Documentos/IA/prisma/schema.prisma)
 
 ## Bounded Contexts
@@ -54,35 +63,12 @@ Objetivo da V1:
 - `publishing`
 - `analytics`
 - `agent-ops`
+- `admin-lab`
+- `profiles`
 
-## Estrutura de pastas proposta
+## Regra central
 
-```text
-docs/
-  adr/
-prisma/
-src/
-  app/
-  contracts/
-  integrations/
-    ai/
-    bundle/
-  lib/
-  modules/
-    identity/
-    workspace/
-    project/
-    strategy/
-    planning/
-    content/
-    approval/
-    publishing/
-    analytics/
-    agent-ops/
-trigger/
-  jobs/
-```
+Projetos de cliente usam `approvalMode = MANUAL_REQUIRED`.
 
-## Regra central da V1
-
-Nenhum conteúdo pode ser publicado ou agendado sem `Approval.status = APPROVED`.
+Excecao controlada:
+- projetos internos de experimento, operados por `platform admin` dentro de `workspace.type = ADMIN_LAB`, podem usar `approvalMode = AUTO_APPROVE` para rodar testes autonomos e alimentar `publication profiles`.
