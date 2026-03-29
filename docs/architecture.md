@@ -11,6 +11,7 @@ Integrações externas:
 
 - `bundle.social`: conexão de contas, scheduling, publishing, analytics, webhooks.
 - provider de IA via `AI SDK 6`.
+- auth via `Clerk`.
 
 Persistência:
 

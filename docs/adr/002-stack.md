@@ -11,6 +11,7 @@ Usar:
 - `Next.js 16.x`
 - `React 19.2`
 - `TypeScript`
+- `Clerk`
 - `AI SDK 6`
 - `Trigger.dev` estável
 - `PostgreSQL`
@@ -23,6 +24,7 @@ Usar:
 
 - `Next.js` entrega UI, API e SSR com ótima velocidade de desenvolvimento.
 - `TypeScript` reduz ambiguidade em domínio, integrações e jobs.
+- `Clerk` acelera autenticação e gestão de sessão no App Router.
 - `AI SDK 6` ajuda a manter baixo acoplamento ao provider.
 - `Trigger.dev` resolve jobs, retries e cron sem criar infra extra na V1.
 - `PostgreSQL` + `Prisma` equilibram robustez e DX.

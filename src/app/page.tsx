@@ -12,6 +12,9 @@ export default function Home() {
           <a className="button button-primary" href="/dashboard">
             Abrir dashboard
           </a>
+          <a className="button button-secondary" href="/dashboard/onboarding">
+            Iniciar onboarding
+          </a>
           <a className="button button-secondary" href="/api/health">
             Ver healthcheck
           </a>
