@@ -1,4 +1,6 @@
 import type {
+  PostCreateResponse,
+  PostGetResponse,
   SocialAccountCreatePortalLinkResponse,
   TeamCreateTeamResponse,
   TeamGetTeamResponse,
@@ -48,6 +50,46 @@ export async function createBundlePortalLink(input: {
       maxSocialAccountsConnected: 2,
     },
   }) as Promise<SocialAccountCreatePortalLinkResponse>;
+}
+
+export async function createBundlePost(input: {
+  requestBody: {
+    teamId: string;
+    title: string;
+    postDate: string;
+    status: "DRAFT" | "SCHEDULED";
+    socialAccountTypes: Array<"INSTAGRAM" | "TIKTOK">;
+    data: {
+      INSTAGRAM?: {
+        type?: "POST" | "REEL" | "STORY";
+        text?: string | null;
+        uploadIds?: string[] | null;
+      } | null;
+      TIKTOK?: {
+        type?: "VIDEO" | "IMAGE";
+        text?: string | null;
+        uploadIds?: string[] | null;
+        privacy?:
+          | "SELF_ONLY"
+          | "PUBLIC_TO_EVERYONE"
+          | "MUTUAL_FOLLOW_FRIENDS"
+          | "FOLLOWER_OF_CREATOR"
+          | null;
+      } | null;
+    };
+  };
+}) {
+  const client = getBundleClient();
+
+  return client.post.postCreate(input) as Promise<PostCreateResponse>;
+}
+
+export async function getBundlePost(postId: string) {
+  const client = getBundleClient();
+
+  return client.post.postGet({
+    id: postId,
+  }) as Promise<PostGetResponse>;
 }
 
 export function constructBundleWebhookEvent(input: {

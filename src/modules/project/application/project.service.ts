@@ -57,6 +57,16 @@ export async function getProjectForUser(userId: string, projectId: string) {
               createdAt: "desc",
             },
           },
+          assets: {
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
+          publications: {
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
         },
       },
       pillars: {

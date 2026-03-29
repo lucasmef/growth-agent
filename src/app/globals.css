@@ -309,6 +309,28 @@ a {
   color: var(--muted);
 }
 
+.inline-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.input {
+  min-width: 180px;
+  border: 1px solid rgba(28, 24, 19, 0.12);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
+  font: inherit;
+}
+
+.helper-text {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
 .auth-shell {
   display: flex;
   justify-content: center;

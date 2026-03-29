@@ -6,13 +6,17 @@ import { requireAppUser } from "@/modules/identity/application/require-app-user"
 import { getProjectForUser } from "@/modules/project/application/project.service";
 import {
   approveContentAction,
+  attachBundleAssetAction,
   ensureBundleTeamAction,
   generateDraftForSlotAction,
   generatePillarsAction,
   generateWeeklyCalendarAction,
   openBundlePortalAction,
+  publishNowAction,
   refreshBundleAccountsAction,
   requestChangesAction,
+  scheduleContentAction,
+  syncPublicationAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +36,7 @@ export default async function ProjectDetailsPage({
     bundle?: string;
     planning?: string;
     content?: string;
+    publishing?: string;
   }>;
 }) {
   if (!isDatabaseConfigured()) {
@@ -71,10 +76,18 @@ export default async function ProjectDetailsPage({
         </div>
       </section>
 
-      {query.bundle || query.planning || query.content ? (
+      {query.bundle || query.planning || query.content || query.publishing ? (
         <section className="flash-banner">
           <p>
-            {query.content === "draft-generated"
+            {query.publishing === "asset-attached"
+              ? "Asset anexado ao conteudo com sucesso."
+              : query.publishing === "scheduled"
+                ? "Conteudo enviado para agendamento via bundle.social."
+                : query.publishing === "published-now"
+                  ? "Conteudo enviado para publicacao imediata via bundle.social."
+                  : query.publishing === "synced"
+                    ? "Status da publicacao sincronizado com sucesso."
+                    : query.content === "draft-generated"
               ? "Draft gerado e pronto para revisao."
               : query.content === "approved"
                 ? "Conteudo aprovado com sucesso."
@@ -238,6 +251,8 @@ export default async function ProjectDetailsPage({
               {project.contentItems.map((item) => {
                 const latestVersion = item.versions[0];
                 const latestApproval = item.approvals[0];
+                const latestPublication = item.publications[0];
+                const assetCount = item.assets.filter((asset) => asset.bundleUploadId).length;
 
                 return (
                   <div className="subcard subcard-block" key={item.id}>
@@ -276,20 +291,97 @@ export default async function ProjectDetailsPage({
                           {new Date(latestApproval.createdAt).toLocaleString("pt-BR")}
                         </p>
                       ) : null}
+                      <p className="muted">
+                        assets prontos {assetCount} Â· publicacao {latestPublication?.status ?? "nao iniciada"}
+                      </p>
+                      {latestPublication?.scheduledFor ? (
+                        <p className="muted">
+                          agendado para {new Date(latestPublication.scheduledFor).toLocaleString("pt-BR")}
+                        </p>
+                      ) : null}
+                      {latestPublication?.publishedAt ? (
+                        <p className="muted">
+                          publicado em {new Date(latestPublication.publishedAt).toLocaleString("pt-BR")}
+                        </p>
+                      ) : null}
+                      {latestPublication?.errorMessage ? (
+                        <p className="error-text">{latestPublication.errorMessage}</p>
+                      ) : null}
                     </div>
 
                     {latestVersion ? (
-                      <div className="actions">
-                        <form action={approveContentAction.bind(null, project.id, item.id)}>
-                          <button className="button button-primary" type="submit">
-                            Aprovar
-                          </button>
-                        </form>
-                        <form action={requestChangesAction.bind(null, project.id, item.id)}>
+                      <div className="stack-sm">
+                        {item.status === "DRAFT_READY" ||
+                        item.status === "CHANGES_REQUESTED" ||
+                        item.status === "APPROVED" ? (
+                          <div className="actions">
+                            {(item.status === "DRAFT_READY" ||
+                              item.status === "CHANGES_REQUESTED") ? (
+                              <form action={approveContentAction.bind(null, project.id, item.id)}>
+                                <button className="button button-primary" type="submit">
+                                  Aprovar
+                                </button>
+                              </form>
+                            ) : null}
+                            {(item.status === "DRAFT_READY" ||
+                              item.status === "APPROVED") ? (
+                              <form action={requestChangesAction.bind(null, project.id, item.id)}>
+                                <button className="button button-secondary" type="submit">
+                                  Pedir mudancas
+                                </button>
+                              </form>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        <form
+                          action={attachBundleAssetAction.bind(null, project.id, item.id)}
+                          className="inline-form"
+                        >
+                          <input
+                            className="input"
+                            type="text"
+                            name="bundleUploadId"
+                            placeholder="bundle upload id"
+                            required
+                          />
+                          <select className="input" name="assetType" defaultValue="VIDEO">
+                            <option value="VIDEO">VIDEO</option>
+                            <option value="IMAGE">IMAGE</option>
+                          </select>
                           <button className="button button-secondary" type="submit">
-                            Pedir mudancas
+                            Anexar asset
                           </button>
                         </form>
+
+                        <p className="helper-text">
+                          V1 usa asset manual: gere ou suba a midia no bundle.social e cole aqui o `uploadId`.
+                        </p>
+
+                        {item.status === "APPROVED" ? (
+                          <div className="actions">
+                            <form action={scheduleContentAction.bind(null, project.id, item.id)}>
+                              <button className="button button-primary" type="submit">
+                                Agendar no bundle
+                              </button>
+                            </form>
+                            <form action={publishNowAction.bind(null, project.id, item.id)}>
+                              <button className="button button-secondary" type="submit">
+                                Publicar agora
+                              </button>
+                            </form>
+                          </div>
+                        ) : null}
+
+                        {latestPublication ? (
+                          <div className="actions">
+                            <form action={syncPublicationAction.bind(null, project.id, item.id)}>
+                              <button className="button button-secondary" type="submit">
+                                Sincronizar publicacao
+                              </button>
+                            </form>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>

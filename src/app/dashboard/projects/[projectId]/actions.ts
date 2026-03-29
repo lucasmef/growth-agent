@@ -19,6 +19,12 @@ import {
   generatePillarsForProject,
   generateWeeklyCalendarForProject,
 } from "@/modules/planning/application/planning.service";
+import {
+  attachBundleUploadToContent,
+  publishApprovedContentNowForUser,
+  scheduleApprovedContentForUser,
+  syncLatestPublicationForUser,
+} from "@/modules/publishing/application/publishing.service";
 
 export async function ensureBundleTeamAction(projectId: string) {
   const appUser = await requireAppUser();
@@ -93,4 +99,59 @@ export async function requestChangesAction(projectId: string, contentItemId: str
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect(`/dashboard/projects/${projectId}?content=changes-requested`);
+}
+
+export async function attachBundleAssetAction(
+  projectId: string,
+  contentItemId: string,
+  formData: FormData,
+) {
+  const appUser = await requireAppUser();
+  const bundleUploadId = String(formData.get("bundleUploadId") ?? "").trim();
+  const assetType = String(formData.get("assetType") ?? "VIDEO").trim();
+
+  if (!bundleUploadId) {
+    throw new Error("bundleUploadId is required");
+  }
+
+  if (assetType !== "IMAGE" && assetType !== "VIDEO") {
+    throw new Error("assetType must be IMAGE or VIDEO");
+  }
+
+  await attachBundleUploadToContent({
+    userId: appUser.id,
+    contentItemId,
+    bundleUploadId,
+    assetType,
+  });
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?publishing=asset-attached`);
+}
+
+export async function scheduleContentAction(projectId: string, contentItemId: string) {
+  const appUser = await requireAppUser();
+
+  await scheduleApprovedContentForUser(appUser.id, contentItemId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?publishing=scheduled`);
+}
+
+export async function publishNowAction(projectId: string, contentItemId: string) {
+  const appUser = await requireAppUser();
+
+  await publishApprovedContentNowForUser(appUser.id, contentItemId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?publishing=published-now`);
+}
+
+export async function syncPublicationAction(projectId: string, contentItemId: string) {
+  const appUser = await requireAppUser();
+
+  await syncLatestPublicationForUser(appUser.id, contentItemId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?publishing=synced`);
 }

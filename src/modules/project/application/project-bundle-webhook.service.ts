@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { WebhookEvent } from "bundlesocial";
 
 import { db } from "@/lib/db";
+import { syncPublicationByBundlePostId } from "@/modules/publishing/application/publishing.service";
 
 import {
   markProjectBundleTeamDeleted,
@@ -59,6 +60,10 @@ export async function processBundleWebhookEvent(event: WebhookEvent) {
     case "social-account.updated":
     case "social-account.deleted": {
       await syncProjectBundleStateByTeamId(event.data.teamId);
+      break;
+    }
+    case "post.published": {
+      await syncPublicationByBundlePostId(event.data.id);
       break;
     }
     default: {
