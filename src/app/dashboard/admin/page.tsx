@@ -2,11 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { isDatabaseConfigured } from "@/lib/env";
-import {
-  listAdminLabWorkspacesForUser,
-} from "@/modules/admin-lab/application/admin-lab.service";
+import { listAdminLabWorkspacesForUser } from "@/modules/admin-lab/application/admin-lab.service";
 import { requirePlatformAdmin } from "@/modules/identity/application/require-app-user";
-import { listPublicationProfilesForAdmin } from "@/modules/profiles/application/profile.service";
+import { listPublicationProfileRankingsForAdmin } from "@/modules/profiles/application/profile-insights.service";
 
 import {
   createAdminLabWorkspaceAction,
@@ -38,6 +36,24 @@ function readAdminFlashMessage(value?: string) {
   }
 }
 
+function readExperimentAnalyticsMetric(value: unknown, key: string) {
+  if (!value || typeof value !== "object") {
+    return 0;
+  }
+
+  const analytics =
+    "analytics" in (value as Record<string, unknown>)
+      ? (value as Record<string, unknown>).analytics
+      : null;
+
+  if (!analytics || typeof analytics !== "object") {
+    return 0;
+  }
+
+  const metric = (analytics as Record<string, unknown>)[key];
+  return typeof metric === "number" ? metric : 0;
+}
+
 export default async function AdminDashboardPage({
   searchParams,
 }: {
@@ -48,16 +64,15 @@ export default async function AdminDashboardPage({
       <main className="page-shell">
         <section className="hero hero-compact">
           <p className="eyebrow">Admin Lab</p>
-          <h1>Conecte o banco para ativar a operação interna.</h1>
+          <h1>Conecte o banco para ativar a operacao interna.</h1>
         </section>
       </main>
     );
   }
 
   const appUser = await requirePlatformAdmin().catch(() => redirect("/dashboard"));
-
   const workspaces = await listAdminLabWorkspacesForUser(appUser.id);
-  const profiles = await listPublicationProfilesForAdmin();
+  const profileRankings = await listPublicationProfileRankingsForAdmin();
   const query = await searchParams;
   const runningExperiments = workspaces
     .flatMap((workspace) => workspace.projects)
@@ -69,10 +84,10 @@ export default async function AdminDashboardPage({
     <main className="page-shell">
       <section className="hero hero-compact">
         <p className="eyebrow">Admin Lab</p>
-        <h1>Operação interna de experimentos e perfis vencedores.</h1>
+        <h1>Operacao interna de experimentos e perfis vencedores.</h1>
         <p className="lede">
-          Esta área existe para rodar testes autônomos em contas novas,
-          capturar padrões vencedores e transformá-los em publication profiles.
+          Esta area existe para rodar testes autonomos em contas novas,
+          capturar padroes vencedores e transformar isso em publication profiles.
         </p>
         <div className="actions">
           <Link className="button button-secondary" href="/dashboard">
@@ -106,14 +121,14 @@ export default async function AdminDashboardPage({
         </article>
         <article className="card">
           <h2>Profiles ativos</h2>
-          <p>{profiles.filter((profile) => profile.status === "ACTIVE").length}</p>
+          <p>{profileRankings.filter((profile) => profile.status === "ACTIVE").length}</p>
         </article>
       </section>
 
       <section className="card action-panel">
         <div>
           <p className="section-label">Bootstrap</p>
-          <h2>Criar workspace de laboratório</h2>
+          <h2>Criar workspace de laboratorio</h2>
           <p className="muted">
             Use um workspace do tipo `ADMIN_LAB` para isolar contas de teste e
             projetos que podem usar `AUTO_APPROVE`.
@@ -139,8 +154,8 @@ export default async function AdminDashboardPage({
           <article className="card">
             <h2>Nenhum admin lab criado ainda.</h2>
             <p>
-              Crie o primeiro workspace de laboratório para começar a rodar
-              experimentos autônomos.
+              Crie o primeiro workspace de laboratorio para comecar a rodar
+              experimentos autonomos.
             </p>
           </article>
         ) : (
@@ -151,7 +166,7 @@ export default async function AdminDashboardPage({
                   <p className="section-label">Admin Lab</p>
                   <h2>{workspace.name}</h2>
                   <p className="muted">
-                    tipo {workspace.type} · papel {workspace.members[0]?.role ?? "OWNER"}
+                    tipo {workspace.type} - papel {workspace.members[0]?.role ?? "OWNER"}
                   </p>
                 </div>
                 <span className="pill">{workspace.projects.length} projetos</span>
@@ -194,20 +209,33 @@ export default async function AdminDashboardPage({
                   workspace.projects.map((project) => {
                     const latestRun = project.experimentRuns[0];
                     const running = latestRun?.status === "RUNNING";
+                    const runViews = readExperimentAnalyticsMetric(
+                      latestRun?.resultMetrics,
+                      "views",
+                    );
+                    const runFollowers = readExperimentAnalyticsMetric(
+                      latestRun?.resultMetrics,
+                      "followers",
+                    );
 
                     return (
                       <div className="subcard subcard-block" key={project.id}>
                         <div>
                           <h3>{project.name}</h3>
                           <p className="muted">
-                            {project.niche} · modo {project.mode} · aprovacao {project.approvalMode}
+                            {project.niche} - modo {project.mode} - aprovacao {project.approvalMode}
                           </p>
                           <p className="muted">
                             ultimo experimento {latestRun?.status ?? "nao iniciado"}
                             {latestRun?.startedAt
-                              ? ` · ${new Date(latestRun.startedAt).toLocaleString("pt-BR")}`
+                              ? ` - ${new Date(latestRun.startedAt).toLocaleString("pt-BR")}`
                               : ""}
                           </p>
+                          {latestRun ? (
+                            <p className="muted">
+                              views {runViews.toLocaleString("pt-BR")} - followers {runFollowers.toLocaleString("pt-BR")}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="stack-sm">
@@ -309,25 +337,37 @@ export default async function AdminDashboardPage({
           <div className="card-header">
             <div>
               <p className="section-label">Publication Profiles</p>
-              <h2>Catalogo interno</h2>
+              <h2>Catalogo interno e ranking operacional</h2>
             </div>
-            <span className="pill">{profiles.length} itens</span>
+            <span className="pill">{profileRankings.length} itens</span>
           </div>
 
           <div className="stack-sm">
-            {profiles.length === 0 ? (
+            {profileRankings.length === 0 ? (
               <p className="muted">Nenhum publication profile promovido ainda.</p>
             ) : (
-              profiles.map((profile) => (
-                <div className="subcard" key={profile.id}>
+              profileRankings.map((profile, index) => (
+                <div className="subcard" key={profile.profileId}>
                   <div>
-                    <h3>{profile.name}</h3>
+                    <h3>
+                      #{index + 1} {profile.name}
+                    </h3>
                     <p className="muted">
-                      {profile.status} · slug {profile.slug}
+                      score {profile.score}/100 ({profile.scoreLabel}) - {profile.status} - slug {profile.slug}
                     </p>
                     <p className="muted">
-                      origem {profile.sourceProject?.name ?? "manual"} · atribuicoes {profile.assignedProjects.length}
+                      origem {profile.sourceProjectName ?? "manual"} - atribuicoes {profile.assignedProjectsCount}
                     </p>
+                    <p className="muted">
+                      readiness {profile.readinessScore} - experimento {profile.experimentScore} - adocao {profile.adoptionScore} - recencia {profile.recencyScore}
+                    </p>
+                    {profile.keySignals.length ? (
+                      <ul className="plain-list">
+                        {profile.keySignals.map((signal) => (
+                          <li key={signal}>{signal}</li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 </div>
               ))

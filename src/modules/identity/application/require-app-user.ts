@@ -2,9 +2,49 @@ import { PlatformRole } from "@prisma/client";
 import { auth, currentUser } from "@clerk/nextjs/server";
 
 import { db } from "@/lib/db";
-import { getPlatformAdminEmails } from "@/lib/env";
+import {
+  getDevelopmentAuthIdentity,
+  getPlatformAdminEmails,
+  isDevelopmentAuthEnabled,
+} from "@/lib/env";
+
+function resolvePlatformRole(email: string) {
+  const normalizedEmail = email.toLowerCase();
+  const platformAdminEmails = getPlatformAdminEmails();
+
+  if (
+    platformAdminEmails.includes(normalizedEmail) ||
+    (platformAdminEmails.length === 0 && isDevelopmentAuthEnabled())
+  ) {
+    return PlatformRole.ADMIN;
+  }
+
+  return PlatformRole.USER;
+}
 
 export async function requireAppUser() {
+  if (isDevelopmentAuthEnabled()) {
+    const identity = getDevelopmentAuthIdentity();
+    const email = identity.email.toLowerCase();
+
+    return db.user.upsert({
+      where: {
+        authProviderId: `dev:${email}`,
+      },
+      update: {
+        email,
+        name: identity.name,
+        platformRole: resolvePlatformRole(email),
+      },
+      create: {
+        authProviderId: `dev:${email}`,
+        email,
+        name: identity.name,
+        platformRole: resolvePlatformRole(email),
+      },
+    });
+  }
+
   const { userId } = await auth();
 
   if (!userId) {
@@ -23,9 +63,7 @@ export async function requireAppUser() {
   }
 
   const normalizedEmail = email.toLowerCase();
-  const platformRole = getPlatformAdminEmails().includes(normalizedEmail)
-    ? PlatformRole.ADMIN
-    : PlatformRole.USER;
+  const platformRole = resolvePlatformRole(normalizedEmail);
 
   return db.user.upsert({
     where: {

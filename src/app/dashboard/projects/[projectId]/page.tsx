@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { isBundleConfigured, isDatabaseConfigured } from "@/lib/env";
 import { requireAppUser } from "@/modules/identity/application/require-app-user";
 import { getProjectForUser } from "@/modules/project/application/project.service";
+import { recommendPublicationProfilesForProject } from "@/modules/profiles/application/profile-insights.service";
 import { listActivePublicationProfiles } from "@/modules/profiles/application/profile.service";
 import {
   approveContentAction,
@@ -70,7 +71,10 @@ export default async function ProjectDetailsPage({
     notFound();
   }
 
-  const activeProfiles = await listActivePublicationProfiles();
+  const [activeProfiles, recommendedProfiles] = await Promise.all([
+    listActivePublicationProfiles(),
+    recommendPublicationProfilesForProject(appUser.id, projectId),
+  ]);
 
   const contentBySlotId = new Map(
     project.contentItems
@@ -196,6 +200,44 @@ export default async function ProjectDetailsPage({
         <p className="helper-text">
           Atual: {project.publicationProfile?.name ?? "nenhum profile associado"}
         </p>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <div>
+            <p className="section-label">Recommendations</p>
+            <h2>Profiles sugeridos para este projeto</h2>
+          </div>
+          <span className="pill">{recommendedProfiles.length} sugestoes</span>
+        </div>
+
+        {recommendedProfiles.length === 0 ? (
+          <p className="muted">Nenhum publication profile ativo disponivel ainda.</p>
+        ) : (
+          <div className="stack-sm">
+            {recommendedProfiles.map((profile, index) => (
+              <div className="subcard" key={profile.profileId}>
+                <div>
+                  <h3>
+                    #{index + 1} {profile.name}
+                    {profile.isCurrentProfile ? " - atual" : ""}
+                  </h3>
+                  <p className="muted">
+                    recomendacao {profile.recommendationScore}/120 - score operacional {profile.score}/100 - fit {profile.fitScore}
+                  </p>
+                  <p className="muted">
+                    plataformas {profile.recommendedPlatforms.join(", ") || "nao informado"} - atribuicoes {profile.assignedProjectsCount}
+                  </p>
+                  <ul className="plain-list">
+                    {profile.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="card action-panel">

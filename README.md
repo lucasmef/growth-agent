@@ -72,3 +72,19 @@ Projetos de cliente usam `approvalMode = MANUAL_REQUIRED`.
 
 Excecao controlada:
 - projetos internos de experimento, operados por `platform admin` dentro de `workspace.type = ADMIN_LAB`, podem usar `approvalMode = AUTO_APPROVE` para rodar testes autonomos e alimentar `publication profiles`.
+
+## Bootstrap local
+
+1. Copie [`.env.example`](C:/Users/lucas/OneDrive/Documentos/IA/.env.example) para `.env`.
+2. Rode `pnpm db:push` e depois `pnpm db:seed`.
+3. Suba a app com `pnpm dev`.
+
+Modo local sem chaves:
+- `DEV_AUTH_BYPASS=true` libera uma sessao local sem Clerk.
+- `DEV_AUTH_EMAIL` define o usuario local.
+- `PLATFORM_ADMIN_EMAILS` pode apontar para esse mesmo email para liberar o admin lab.
+
+O seed cria:
+- um workspace cliente com projeto, estrategia, calendario, conteudo, approval, publication e analytics;
+- um `ADMIN_LAB` com experimento promovido para `PublicationProfile`;
+- um usuario local admin coerente com o modo de desenvolvimento.

@@ -6,6 +6,9 @@ const envSchema = z.object({
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   CLERK_SIGN_IN_URL: z.string().min(1).optional(),
   CLERK_SIGN_UP_URL: z.string().min(1).optional(),
+  DEV_AUTH_BYPASS: z.string().optional(),
+  DEV_AUTH_EMAIL: z.string().email().optional(),
+  DEV_AUTH_NAME: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   BUNDLE_SOCIAL_API_KEY: z.string().min(1).optional(),
   BUNDLE_SOCIAL_WEBHOOK_SECRET: z.string().min(1).optional(),
@@ -42,6 +45,26 @@ export function getPublicEnvironmentSnapshot() {
 
 export function isDatabaseConfigured() {
   return Boolean(process.env.DATABASE_URL);
+}
+
+export function isClerkConfigured() {
+  return Boolean(
+    process.env.CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
+  );
+}
+
+export function isDevelopmentAuthEnabled() {
+  return (
+    process.env.DEV_AUTH_BYPASS === "true" ||
+    (!isClerkConfigured() && process.env.NODE_ENV !== "production")
+  );
+}
+
+export function getDevelopmentAuthIdentity() {
+  return {
+    email: process.env.DEV_AUTH_EMAIL ?? "local-admin@growth-agent.dev",
+    name: process.env.DEV_AUTH_NAME ?? "Local Admin",
+  };
 }
 
 export function isBundleConfigured() {
