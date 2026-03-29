@@ -6,6 +6,8 @@ import { requireAppUser } from "@/modules/identity/application/require-app-user"
 import { getProjectForUser } from "@/modules/project/application/project.service";
 import {
   ensureBundleTeamAction,
+  generatePillarsAction,
+  generateWeeklyCalendarAction,
   openBundlePortalAction,
   refreshBundleAccountsAction,
 } from "./actions";
@@ -23,7 +25,7 @@ export default async function ProjectDetailsPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ bundle?: string }>;
+  searchParams: Promise<{ bundle?: string; planning?: string }>;
 }) {
   if (!isDatabaseConfigured()) {
     return notFound();
@@ -56,10 +58,14 @@ export default async function ProjectDetailsPage({
         </div>
       </section>
 
-      {query.bundle ? (
+      {query.bundle || query.planning ? (
         <section className="flash-banner">
           <p>
-            {query.bundle === "connected"
+            {query.planning === "pillars-generated"
+              ? "Pilares gerados e salvos no projeto."
+              : query.planning === "calendar-generated"
+                ? "Calendário semanal gerado com sucesso."
+                : query.bundle === "connected"
               ? "Retorno do portal recebido. Agora sincronize para atualizar as contas locais."
               : query.bundle === "refreshed"
                 ? "Contas sincronizadas com sucesso."
@@ -121,6 +127,76 @@ export default async function ProjectDetailsPage({
         )}
       </section>
 
+      <section className="card action-panel">
+        <div>
+          <p className="section-label">Planning Engine</p>
+          <h2>Pilares e calendário semanal</h2>
+          <p className="muted">
+            Gere a estrutura editorial base da semana. Se a chave de IA não estiver configurada, o sistema usa um fallback determinístico.
+          </p>
+        </div>
+
+        <div className="actions">
+          <form action={generatePillarsAction.bind(null, project.id)}>
+            <button className="button button-secondary" type="submit">
+              Gerar pilares
+            </button>
+          </form>
+          <form action={generateWeeklyCalendarAction.bind(null, project.id)}>
+            <button className="button button-primary" type="submit">
+              Gerar calendário semanal
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section className="details-grid">
+        <article className="card">
+          <p className="section-label">Pilares de conteúdo</p>
+          {project.pillars.length ? (
+            <div className="stack-sm">
+              {project.pillars.map((pillar) => (
+                <div className="subcard" key={pillar.id}>
+                  <div>
+                    <h3>
+                      {pillar.name} · prioridade {pillar.priority}
+                    </h3>
+                    <p className="muted">{pillar.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Nenhum pilar gerado ainda.</p>
+          )}
+        </article>
+
+        <article className="card">
+          <p className="section-label">Calendário atual</p>
+          {project.calendarWeeks[0]?.slots.length ? (
+            <div className="stack-sm">
+              {project.calendarWeeks[0].slots.map((slot) => (
+                <div className="subcard" key={slot.id}>
+                  <div>
+                    <h3>
+                      {slot.platform} · {slot.format}
+                    </h3>
+                    <p className="muted">
+                      {new Date(slot.plannedFor).toLocaleString("pt-BR")} ·{" "}
+                      {slot.pillar?.name ?? "Sem pilar"}
+                    </p>
+                    <p className="muted">{slot.objective}</p>
+                    <p className="muted">{slot.brief}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Nenhum calendário semanal gerado ainda.</p>
+          )}
+        </article>
+      </section>
+
       <section className="details-grid">
         <article className="card">
           <p className="section-label">Contas conectadas</p>
@@ -141,6 +217,39 @@ export default async function ProjectDetailsPage({
             </div>
           ) : (
             <p className="muted">Nenhuma conta local sincronizada ainda.</p>
+          )}
+        </article>
+      </section>
+
+      <section className="details-grid">
+        <article className="card">
+          <p className="section-label">Agent Runs</p>
+          {project.agentRuns.length ? (
+            <div className="stack-sm">
+              {project.agentRuns.map((run) => (
+                <div className="subcard" key={run.id}>
+                  <div>
+                    <h3>
+                      {run.kind} · {run.status}
+                    </h3>
+                    <p className="muted">
+                      modelo {run.model ?? "n/a"} · prompt {run.promptVersion ?? "n/a"}
+                    </p>
+                    {run.decisionLogs.length ? (
+                      <ul className="plain-list">
+                        {run.decisionLogs.map((log) => (
+                          <li key={log.id}>
+                            {log.stepKey}: {log.summary}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Nenhuma execução do agente registrada ainda.</p>
           )}
         </article>
       </section>

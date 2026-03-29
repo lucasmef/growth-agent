@@ -10,6 +10,10 @@ import {
   ensureProjectBundleTeamForUser,
   refreshProjectBundleStateForUser,
 } from "@/modules/project/application/project-bundle.service";
+import {
+  generatePillarsForProject,
+  generateWeeklyCalendarForProject,
+} from "@/modules/planning/application/planning.service";
 
 export async function ensureBundleTeamAction(projectId: string) {
   const appUser = await requireAppUser();
@@ -39,4 +43,22 @@ export async function refreshBundleAccountsAction(projectId: string) {
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect(`/dashboard/projects/${projectId}?bundle=refreshed`);
+}
+
+export async function generatePillarsAction(projectId: string) {
+  const appUser = await requireAppUser();
+
+  await generatePillarsForProject(appUser.id, projectId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?planning=pillars-generated`);
+}
+
+export async function generateWeeklyCalendarAction(projectId: string) {
+  const appUser = await requireAppUser();
+
+  await generateWeeklyCalendarForProject(appUser.id, projectId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?planning=calendar-generated`);
 }

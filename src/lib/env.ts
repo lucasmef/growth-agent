@@ -47,6 +47,10 @@ export function isBundleConfigured() {
   return Boolean(process.env.BUNDLE_SOCIAL_API_KEY);
 }
 
+export function isAiConfigured() {
+  return Boolean(process.env.OPENAI_API_KEY);
+}
+
 export function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
