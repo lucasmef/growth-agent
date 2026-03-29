@@ -1,0 +1,440 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+}
+
+enum SocialAccountStatus {
+  CONNECTING
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ContentPillarStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CalendarWeekStatus {
+  DRAFT
+  READY
+  LOCKED
+}
+
+enum ContentFormat {
+  REEL
+  CAROUSEL
+  STORY
+  SHORT_VIDEO
+  TALKING_HEAD
+  BROLL
+}
+
+enum ContentItemStatus {
+  IDEA
+  PLANNED
+  DRAFTING
+  DRAFT_READY
+  CHANGES_REQUESTED
+  APPROVED
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  PUBLISH_FAILED
+  ANALYZED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum PublicationStatus {
+  PENDING
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  THUMBNAIL
+  DOCUMENT
+  EXTERNAL_REFERENCE
+}
+
+enum AgentRunKind {
+  STRATEGY
+  PILLARS
+  CALENDAR
+  DRAFT
+  REWRITE
+  ANALYTICS_SYNC
+  OPTIMIZATION
+}
+
+enum AgentRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum DecisionType {
+  INPUT_SUMMARY
+  PLANNING
+  CONTENT_SELECTION
+  POLICY_CHECK
+  PUBLICATION_DECISION
+  OPTIMIZATION_INSIGHT
+}
+
+enum AnalyticsScope {
+  PROJECT
+  SOCIAL_ACCOUNT
+  CONTENT_ITEM
+}
+
+model User {
+  id             String            @id @default(cuid())
+  email          String            @unique
+  name           String?
+  authProviderId String?           @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  memberships    WorkspaceMember[]
+  approvals      Approval[]
+}
+
+model Workspace {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  members     WorkspaceMember[]
+  projects    Project[]
+}
+
+model WorkspaceMember {
+  id          String         @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole  @default(MEMBER)
+  createdAt   DateTime       @default(now())
+
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Project {
+  id                 String              @id @default(cuid())
+  workspaceId        String
+  name               String
+  niche              String
+  status             ProjectStatus       @default(ACTIVE)
+  timezone           String              @default("America/Sao_Paulo")
+  bundleTeamId       String?             @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  strategy           ProjectStrategy?
+  socialAccounts     SocialAccount[]
+  pillars            ContentPillar[]
+  calendarWeeks      CalendarWeek[]
+  contentItems       ContentItem[]
+  analyticsSnapshots AnalyticsSnapshot[]
+  agentRuns          AgentRun[]
+
+  @@index([workspaceId])
+}
+
+model ProjectStrategy {
+  id                 String      @id @default(cuid())
+  projectId          String      @unique
+  targetAudience     String
+  toneOfVoice        String
+  primaryGoal        String
+  secondaryGoals     Json?
+  offerDescription   String?
+  brandRules         Json?
+  editorialRules     Json?
+  bannedTopics       Json?
+  bannedClaims       Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  project            Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model SocialAccount {
+  id                    String               @id @default(cuid())
+  projectId             String
+  platform              Platform
+  username              String?
+  externalAccountId     String?
+  bundleSocialAccountId String?              @unique
+  status                SocialAccountStatus  @default(CONNECTING)
+  metadata              Json?
+  connectedAt           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  project               Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analyticsSnapshots    AnalyticsSnapshot[]
+
+  @@unique([projectId, platform, username])
+  @@index([projectId, platform])
+}
+
+model ContentPillar {
+  id          String              @id @default(cuid())
+  projectId   String
+  name        String
+  description String
+  priority    Int                 @default(50)
+  status      ContentPillarStatus @default(ACTIVE)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slots       CalendarSlot[]
+
+  @@index([projectId])
+}
+
+model CalendarWeek {
+  id                       String              @id @default(cuid())
+  projectId                String
+  weekStart                DateTime
+  status                   CalendarWeekStatus  @default(DRAFT)
+  generatedFromAnalyticsAt DateTime?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  project                  Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slots                    CalendarSlot[]
+
+  @@unique([projectId, weekStart])
+  @@index([projectId, status])
+}
+
+model CalendarSlot {
+  id             String         @id @default(cuid())
+  calendarWeekId String
+  pillarId       String?
+  platform       Platform
+  format         ContentFormat
+  plannedFor     DateTime
+  objective      String
+  brief          String
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  calendarWeek   CalendarWeek   @relation(fields: [calendarWeekId], references: [id], onDelete: Cascade)
+  pillar         ContentPillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  contentItems   ContentItem[]
+
+  @@index([calendarWeekId, plannedFor])
+}
+
+model ContentItem {
+  id                 String             @id @default(cuid())
+  projectId          String
+  calendarSlotId     String?
+  title              String?
+  platform           Platform
+  format             ContentFormat
+  status             ContentItemStatus  @default(IDEA)
+  scheduledFor       DateTime?
+  approvedAt         DateTime?
+  publishedAt        DateTime?
+  performanceScore   Float?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  calendarSlot       CalendarSlot?      @relation(fields: [calendarSlotId], references: [id], onDelete: SetNull)
+  versions           ContentVersion[]
+  assets             Asset[]
+  approvals          Approval[]
+  publications       Publication[]
+  analyticsSnapshots AnalyticsSnapshot[]
+
+  @@index([projectId, status])
+  @@index([projectId, platform, scheduledFor])
+}
+
+model ContentVersion {
+  id             String      @id @default(cuid())
+  contentItemId  String
+  versionNumber  Int
+  hook           String
+  script         String
+  caption        String
+  cta            String
+  hashtags       Json?
+  assetBrief     String?
+  generationMeta Json?
+  model          String?
+  promptVersion  String?
+  createdAt      DateTime    @default(now())
+
+  contentItem    ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@unique([contentItemId, versionNumber])
+  @@index([contentItemId])
+}
+
+model Asset {
+  id             String       @id @default(cuid())
+  projectId      String
+  contentItemId  String?
+  type           AssetType
+  source         String
+  bundleUploadId String?
+  url            String?
+  mimeType       String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contentItem    ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, type])
+}
+
+model Approval {
+  id            String         @id @default(cuid())
+  contentItemId String
+  reviewerId    String
+  status        ApprovalStatus @default(PENDING)
+  notes         String?
+  actedAt       DateTime?
+  createdAt     DateTime       @default(now())
+
+  contentItem   ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  reviewer      User           @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([contentItemId, status])
+}
+
+model Publication {
+  id             String            @id @default(cuid())
+  contentItemId  String
+  bundlePostId   String?           @unique
+  status         PublicationStatus @default(PENDING)
+  scheduledFor   DateTime?
+  publishedAt    DateTime?
+  errorCode      String?
+  errorMessage   String?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  contentItem    ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@index([contentItemId, status])
+}
+
+model AnalyticsSnapshot {
+  id               String          @id @default(cuid())
+  projectId        String
+  socialAccountId  String?
+  contentItemId    String?
+  scope            AnalyticsScope
+  snapshotDate     DateTime
+  metrics          Json
+  rawPayload       Json?
+  createdAt        DateTime        @default(now())
+
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  socialAccount    SocialAccount?  @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  contentItem      ContentItem?    @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, snapshotDate])
+  @@index([socialAccountId, snapshotDate])
+  @@index([contentItemId, snapshotDate])
+}
+
+model AgentRun {
+  id             String          @id @default(cuid())
+  projectId      String
+  kind           AgentRunKind
+  status         AgentRunStatus  @default(QUEUED)
+  model          String?
+  promptVersion  String?
+  inputPayload   Json?
+  outputPayload  Json?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  errorMessage   String?
+  createdAt      DateTime        @default(now())
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  decisionLogs   DecisionLog[]
+
+  @@index([projectId, kind, status])
+}
+
+model DecisionLog {
+  id            String       @id @default(cuid())
+  agentRunId    String
+  stepKey       String
+  decisionType  DecisionType
+  summary       String
+  payload       Json?
+  createdAt     DateTime     @default(now())
+
+  agentRun      AgentRun     @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@index([agentRunId, stepKey])
+}
+
+model WebhookEvent {
+  id              String    @id @default(cuid())
+  provider        String
+  externalEventId String?
+  eventType       String
+  payload         Json
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+
+  @@index([provider, eventType])
+  @@index([receivedAt])
+  @@unique([provider, externalEventId])
+}
