@@ -1,8 +1,11 @@
 import {
+  ApprovalMode,
   AgentRunKind,
   ApprovalStatus,
   ContentItemStatus,
   DecisionType,
+  ProjectMode,
+  WorkspaceType,
 } from "@prisma/client";
 
 import { generateStructuredObject } from "@/integrations/ai/ai-gateway";
@@ -19,6 +22,14 @@ import { getProjectForUser } from "@/modules/project/application/project.service
 import { generatedDraftSchema, type GeneratedDraft } from "./content.schemas";
 
 type ProjectWithRelations = Awaited<ReturnType<typeof getProjectForUser>>;
+
+function isAutoApproveProject(project: ProjectWithRelations) {
+  return (
+    project.mode === ProjectMode.EXPERIMENT &&
+    project.approvalMode === ApprovalMode.AUTO_APPROVE &&
+    project.workspace.type === WorkspaceType.ADMIN_LAB
+  );
+}
 
 function readStringList(value: unknown) {
   return Array.isArray(value)
@@ -210,13 +221,35 @@ export async function generateDraftForCalendarSlot(
       },
     });
 
-    await db.contentItem.update({
-      where: { id: contentItem.id },
-      data: {
-        title: generation.object.title,
-        status: ContentItemStatus.DRAFT_READY,
-      },
-    });
+    if (isAutoApproveProject(project)) {
+      await db.$transaction([
+        db.contentItem.update({
+          where: { id: contentItem.id },
+          data: {
+            title: generation.object.title,
+            status: ContentItemStatus.APPROVED,
+            approvedAt: new Date(),
+          },
+        }),
+        db.approval.create({
+          data: {
+            contentItemId: contentItem.id,
+            reviewerId: userId,
+            status: ApprovalStatus.APPROVED,
+            notes: "Auto-approved for admin lab experiment project.",
+            actedAt: new Date(),
+          },
+        }),
+      ]);
+    } else {
+      await db.contentItem.update({
+        where: { id: contentItem.id },
+        data: {
+          title: generation.object.title,
+          status: ContentItemStatus.DRAFT_READY,
+        },
+      });
+    }
 
     await logDecision({
       agentRunId: agentRun.id,
@@ -230,10 +263,13 @@ export async function generateDraftForCalendarSlot(
       agentRunId: agentRun.id,
       stepKey: "policy-check",
       decisionType: DecisionType.POLICY_CHECK,
-      summary: "Draft generated under editorial rules and banned claims constraints.",
+      summary: isAutoApproveProject(project)
+        ? "Draft generated and auto-approved for admin lab experiment."
+        : "Draft generated under editorial rules and banned claims constraints.",
       payload: {
         bannedTopics: readStringList(project.strategy?.bannedTopics),
         bannedClaims: readStringList(project.strategy?.bannedClaims),
+        autoApproved: isAutoApproveProject(project),
       },
     });
 

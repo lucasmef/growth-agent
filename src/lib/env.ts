@@ -12,6 +12,7 @@ const envSchema = z.object({
   TRIGGER_SECRET_KEY: z.string().min(1).optional(),
   TRIGGER_PROJECT_REF: z.string().min(1).optional(),
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  PLATFORM_ADMIN_EMAILS: z.string().optional(),
 });
 
 export function getEnv() {
@@ -53,4 +54,13 @@ export function isAiConfigured() {
 
 export function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+}
+
+export function getPlatformAdminEmails() {
+  const raw = process.env.PLATFORM_ADMIN_EMAILS ?? "";
+
+  return raw
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
 }

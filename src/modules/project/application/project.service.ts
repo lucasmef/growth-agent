@@ -36,6 +36,7 @@ export async function getProjectForUser(userId: string, projectId: string) {
     include: {
       workspace: true,
       strategy: true,
+      publicationProfile: true,
       socialAccounts: true,
       contentItems: {
         orderBy: {
@@ -104,6 +105,12 @@ export async function getProjectForUser(userId: string, projectId: string) {
           },
         },
       },
+      experimentRuns: {
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 5,
+      },
     },
   });
 
@@ -131,6 +138,13 @@ export async function listProjectsForUser(userId: string) {
     include: {
       workspace: true,
       strategy: true,
+      publicationProfile: true,
+      experimentRuns: {
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 1,
+      },
     },
   });
 }
