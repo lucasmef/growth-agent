@@ -21,6 +21,7 @@ import {
 } from "@/modules/planning/application/planning.service";
 import { assignPublicationProfileInputSchema } from "@/modules/profiles/application/profile.schemas";
 import { assignPublicationProfileToProject } from "@/modules/profiles/application/profile.service";
+import { syncProjectAnalyticsForUser } from "@/modules/analytics/application/analytics.service";
 import {
   attachBundleUploadToContent,
   publishApprovedContentNowForUser,
@@ -172,4 +173,13 @@ export async function assignPublicationProfileAction(
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect(`/dashboard/projects/${projectId}?profile=assigned`);
+}
+
+export async function syncAnalyticsAction(projectId: string) {
+  const appUser = await requireAppUser();
+
+  await syncProjectAnalyticsForUser(appUser.id, projectId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?analytics=synced`);
 }

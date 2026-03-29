@@ -38,6 +38,12 @@ export async function getProjectForUser(userId: string, projectId: string) {
       strategy: true,
       publicationProfile: true,
       socialAccounts: true,
+      analyticsSnapshots: {
+        orderBy: {
+          snapshotDate: "desc",
+        },
+        take: 5,
+      },
       contentItems: {
         orderBy: {
           createdAt: "desc",
@@ -67,6 +73,12 @@ export async function getProjectForUser(userId: string, projectId: string) {
             orderBy: {
               createdAt: "desc",
             },
+          },
+          analyticsSnapshots: {
+            orderBy: {
+              snapshotDate: "desc",
+            },
+            take: 3,
           },
         },
       },

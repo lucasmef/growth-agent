@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { tasks } from "@trigger.dev/sdk";
 
+import { buildProjectAnalyticsSummary, syncProjectAnalytics } from "@/modules/analytics/application/analytics.service";
 import { db } from "@/lib/db";
 import { isTriggerConfigured } from "@/lib/env";
 import { generateDraftForCalendarSlot } from "@/modules/content/application/content.service";
@@ -153,6 +154,20 @@ export async function listRunningExperimentProjectIds() {
 
 export async function computeExperimentMetrics(projectId: string) {
   const project = await getExperimentProjectContext(projectId);
+  const analyticsSummary = await buildProjectAnalyticsSummary(projectId).catch(() => ({
+    impressions: 0,
+    views: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    saves: 0,
+    interactions: 0,
+    followers: 0,
+    engagementRate: 0,
+    syncedContentItems: 0,
+    syncedSocialAccounts: 0,
+    lastComputedAt: new Date().toISOString(),
+  }));
 
   const totals = {
     connectedAccounts: project.socialAccounts.filter(
@@ -180,6 +195,7 @@ export async function computeExperimentMetrics(projectId: string) {
         (publication) => publication.status === PublicationStatus.FAILED,
       ),
     ).length,
+    analytics: analyticsSummary,
   };
 
   return {
@@ -290,11 +306,18 @@ export async function runAutonomousExperimentCycle(projectId: string) {
     actions.push("publications-scheduled");
   }
 
+  const analyticsSync = await syncProjectAnalytics(projectId).catch(() => null);
+
+  if (analyticsSync) {
+    actions.push("analytics-synced");
+  }
+
   const updatedRun = await updateRunningExperimentMetrics(projectId, {
     cycleAt: new Date().toISOString(),
     actions,
     generatedDrafts,
     scheduledPublications,
+    analyticsSync,
   });
 
   return {

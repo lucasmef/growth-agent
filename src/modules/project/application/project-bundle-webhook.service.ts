@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { WebhookEvent } from "bundlesocial";
 
 import { db } from "@/lib/db";
+import { syncContentAnalyticsByBundlePostId } from "@/modules/analytics/application/analytics.service";
 import { syncPublicationByBundlePostId } from "@/modules/publishing/application/publishing.service";
 
 import {
@@ -64,6 +65,7 @@ export async function processBundleWebhookEvent(event: WebhookEvent) {
     }
     case "post.published": {
       await syncPublicationByBundlePostId(event.data.id);
+      await syncContentAnalyticsByBundlePostId(event.data.id).catch(() => null);
       break;
     }
     default: {

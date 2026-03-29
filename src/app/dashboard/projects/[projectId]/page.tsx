@@ -18,6 +18,7 @@ import {
   refreshBundleAccountsAction,
   requestChangesAction,
   scheduleContentAction,
+  syncAnalyticsAction,
   syncPublicationAction,
 } from "./actions";
 
@@ -27,6 +28,16 @@ function readStringList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function readMetricNumber(value: unknown, key: string) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = (value as Record<string, unknown>)[key];
+
+  return typeof candidate === "number" ? candidate : null;
 }
 
 export default async function ProjectDetailsPage({
@@ -40,6 +51,7 @@ export default async function ProjectDetailsPage({
     content?: string;
     publishing?: string;
     profile?: string;
+    analytics?: string;
   }>;
 }) {
   if (!isDatabaseConfigured()) {
@@ -81,10 +93,17 @@ export default async function ProjectDetailsPage({
         </div>
       </section>
 
-      {query.bundle || query.planning || query.content || query.publishing || query.profile ? (
+      {query.bundle ||
+      query.planning ||
+      query.content ||
+      query.publishing ||
+      query.profile ||
+      query.analytics ? (
         <section className="flash-banner">
           <p>
-            {query.profile === "assigned"
+            {query.analytics === "synced"
+              ? "Analytics sincronizados com sucesso."
+              : query.profile === "assigned"
               ? "Publication profile atualizado com sucesso."
               : query.publishing === "asset-attached"
               ? "Asset anexado ao conteudo com sucesso."
@@ -130,6 +149,18 @@ export default async function ProjectDetailsPage({
           <h2>bundle.social</h2>
           <p>{project.bundleTeamId ?? "Team ainda nao provisionado"}</p>
         </article>
+        <article className="card">
+          <h2>Impressions</h2>
+          <p>{readMetricNumber(project.analyticsSnapshots[0]?.metrics, "impressions") ?? 0}</p>
+        </article>
+        <article className="card">
+          <h2>Views</h2>
+          <p>{readMetricNumber(project.analyticsSnapshots[0]?.metrics, "views") ?? 0}</p>
+        </article>
+        <article className="card">
+          <h2>Followers</h2>
+          <p>{readMetricNumber(project.analyticsSnapshots[0]?.metrics, "followers") ?? 0}</p>
+        </article>
       </section>
 
       <section className="card action-panel">
@@ -165,6 +196,24 @@ export default async function ProjectDetailsPage({
         <p className="helper-text">
           Atual: {project.publicationProfile?.name ?? "nenhum profile associado"}
         </p>
+      </section>
+
+      <section className="card action-panel">
+        <div>
+          <p className="section-label">Analytics</p>
+          <h2>Sincronizacao de metricas</h2>
+          <p className="muted">
+            Busca snapshots normalizados do bundle.social para posts e contas conectadas.
+          </p>
+        </div>
+
+        <div className="actions">
+          <form action={syncAnalyticsAction.bind(null, project.id)}>
+            <button className="button button-secondary" type="submit">
+              Sincronizar analytics
+            </button>
+          </form>
+        </div>
       </section>
 
       <section className="card action-panel">
@@ -348,6 +397,14 @@ export default async function ProjectDetailsPage({
                       ) : null}
                       {latestPublication?.errorMessage ? (
                         <p className="error-text">{latestPublication.errorMessage}</p>
+                      ) : null}
+                      {item.analyticsSnapshots[0] ? (
+                        <p className="muted">
+                          views {readMetricNumber(item.analyticsSnapshots[0].metrics, "views") ?? 0}
+                          {" · "}likes {readMetricNumber(item.analyticsSnapshots[0].metrics, "likes") ?? 0}
+                          {" · "}comments {readMetricNumber(item.analyticsSnapshots[0].metrics, "comments") ?? 0}
+                          {" · "}shares {readMetricNumber(item.analyticsSnapshots[0].metrics, "shares") ?? 0}
+                        </p>
                       ) : null}
                     </div>
 

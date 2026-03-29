@@ -1,4 +1,6 @@
 import type {
+  AnalyticsGetPostAnalyticsResponse,
+  AnalyticsGetSocialAccountAnalyticsResponse,
   PostCreateResponse,
   PostGetResponse,
   SocialAccountCreatePortalLinkResponse,
@@ -90,6 +92,32 @@ export async function getBundlePost(postId: string) {
   return client.post.postGet({
     id: postId,
   }) as Promise<PostGetResponse>;
+}
+
+export async function getBundlePostAnalytics(input: {
+  postId?: string;
+  importedPostId?: string;
+  platformType?: "INSTAGRAM" | "TIKTOK";
+}) {
+  const client = getBundleClient();
+
+  return client.analytics.analyticsGetPostAnalytics({
+    postId: input.postId ?? null,
+    importedPostId: input.importedPostId ?? null,
+    platformType: input.platformType ?? null,
+  }) as Promise<AnalyticsGetPostAnalyticsResponse>;
+}
+
+export async function getBundleSocialAccountAnalytics(input: {
+  teamId: string;
+  platformType: "INSTAGRAM" | "TIKTOK";
+}) {
+  const client = getBundleClient();
+
+  return client.analytics.analyticsGetSocialAccountAnalytics({
+    teamId: input.teamId,
+    platformType: input.platformType,
+  }) as Promise<AnalyticsGetSocialAccountAnalyticsResponse>;
 }
 
 export function constructBundleWebhookEvent(input: {
