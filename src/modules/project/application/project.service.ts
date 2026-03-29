@@ -37,6 +37,28 @@ export async function getProjectForUser(userId: string, projectId: string) {
       workspace: true,
       strategy: true,
       socialAccounts: true,
+      contentItems: {
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          calendarSlot: {
+            include: {
+              pillar: true,
+            },
+          },
+          versions: {
+            orderBy: {
+              versionNumber: "desc",
+            },
+          },
+          approvals: {
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
+        },
+      },
       pillars: {
         orderBy: {
           priority: "desc",

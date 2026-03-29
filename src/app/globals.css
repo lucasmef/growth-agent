@@ -201,6 +201,10 @@ a {
   border: 1px solid var(--line);
 }
 
+.subcard-block {
+  align-items: flex-start;
+}
+
 .subcard h3 {
   margin: 0 0 4px;
 }
@@ -291,6 +295,17 @@ a {
 .plain-list {
   margin: 0;
   padding-left: 18px;
+  color: var(--muted);
+}
+
+.draft-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.draft-preview p {
+  margin: 0;
   color: var(--muted);
 }
 

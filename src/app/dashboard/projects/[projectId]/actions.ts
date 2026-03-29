@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAppUrl } from "@/lib/env";
+import {
+  approveContentForUser,
+  generateDraftForCalendarSlot,
+  requestContentChangesForUser,
+} from "@/modules/content/application/content.service";
 import { requireAppUser } from "@/modules/identity/application/require-app-user";
 import {
   createProjectBundlePortalLinkForUser,
@@ -61,4 +66,31 @@ export async function generateWeeklyCalendarAction(projectId: string) {
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect(`/dashboard/projects/${projectId}?planning=calendar-generated`);
+}
+
+export async function generateDraftForSlotAction(projectId: string, slotId: string) {
+  const appUser = await requireAppUser();
+
+  await generateDraftForCalendarSlot(appUser.id, projectId, slotId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?content=draft-generated`);
+}
+
+export async function approveContentAction(projectId: string, contentItemId: string) {
+  const appUser = await requireAppUser();
+
+  await approveContentForUser(appUser.id, contentItemId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?content=approved`);
+}
+
+export async function requestChangesAction(projectId: string, contentItemId: string) {
+  const appUser = await requireAppUser();
+
+  await requestContentChangesForUser(appUser.id, contentItemId);
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}?content=changes-requested`);
 }

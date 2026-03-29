@@ -274,6 +274,7 @@ trigger/
 - `GET /api/projects/:projectId/content`
 - `GET /api/content/:contentItemId`
 - `POST /api/content/:contentItemId/generate-draft`
+- `POST /api/projects/:projectId/calendar-slots/:slotId/draft/generate`
 - `POST /api/content/:contentItemId/request-changes`
 - `POST /api/content/:contentItemId/approve`
 - `POST /api/content/:contentItemId/schedule`
