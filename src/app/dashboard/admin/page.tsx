@@ -12,6 +12,7 @@ import {
   createAdminLabWorkspaceAction,
   createExperimentProjectAction,
   promoteExperimentToProfileAction,
+  runAutonomousCycleAction,
   startExperimentRunAction,
   stopExperimentRunAction,
 } from "./actions";
@@ -30,6 +31,8 @@ function readAdminFlashMessage(value?: string) {
       return "Experimento encerrado com sucesso.";
     case "profile-promoted":
       return "Experimento promovido para publication profile.";
+    case "cycle-triggered":
+      return "Ciclo autonomo disparado com sucesso.";
     default:
       return null;
   }
@@ -266,20 +269,29 @@ export default async function AdminDashboardPage({
                               ) : null}
                             </>
                           ) : (
-                            <form
-                              action={stopExperimentRunAction.bind(null, project.id)}
-                              className="inline-form"
-                            >
-                              <input
-                                className="input"
-                                type="text"
-                                name="summary"
-                                placeholder="Resumo curto do teste encerrado"
-                              />
-                              <button className="button button-secondary" type="submit">
-                                Encerrar experimento
-                              </button>
-                            </form>
+                            <>
+                              <div className="actions">
+                                <form action={runAutonomousCycleAction.bind(null, project.id)}>
+                                  <button className="button button-primary" type="submit">
+                                    Rodar ciclo agora
+                                  </button>
+                                </form>
+                              </div>
+                              <form
+                                action={stopExperimentRunAction.bind(null, project.id)}
+                                className="inline-form"
+                              >
+                                <input
+                                  className="input"
+                                  type="text"
+                                  name="summary"
+                                  placeholder="Resumo curto do teste encerrado"
+                                />
+                                <button className="button button-secondary" type="submit">
+                                  Encerrar experimento
+                                </button>
+                              </form>
+                            </>
                           )}
                         </div>
                       </div>

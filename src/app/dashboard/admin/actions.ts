@@ -16,6 +16,7 @@ import {
   createAdminLabWorkspaceForUser,
   createExperimentProjectForWorkspace,
   startExperimentRunForProject,
+  triggerAutonomousCycleForProject,
   stopExperimentRunForProject,
 } from "@/modules/admin-lab/application/admin-lab.service";
 
@@ -59,6 +60,7 @@ export async function startExperimentRunAction(
   });
 
   await startExperimentRunForProject(appUser.id, projectId, input);
+  await triggerAutonomousCycleForProject(appUser.id, projectId);
 
   revalidatePath("/dashboard/admin");
   revalidatePath(`/dashboard/projects/${projectId}`);
@@ -79,6 +81,16 @@ export async function stopExperimentRunAction(
   revalidatePath("/dashboard/admin");
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect("/dashboard/admin?admin=experiment-stopped");
+}
+
+export async function runAutonomousCycleAction(projectId: string) {
+  const appUser = await requirePlatformAdmin();
+
+  await triggerAutonomousCycleForProject(appUser.id, projectId);
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect("/dashboard/admin?admin=cycle-triggered");
 }
 
 export async function promoteExperimentToProfileAction(

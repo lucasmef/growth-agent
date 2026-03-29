@@ -64,3 +64,7 @@ export function getPlatformAdminEmails() {
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 }
+
+export function isTriggerConfigured() {
+  return Boolean(process.env.TRIGGER_SECRET_KEY && process.env.TRIGGER_PROJECT_REF);
+}

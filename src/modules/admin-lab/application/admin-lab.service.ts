@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { createRandomSuffix, slugify } from "@/lib/slug";
 import { requirePlatformAdmin } from "@/modules/identity/application/require-app-user";
 
+import { computeExperimentMetrics, enqueueAutonomousExperimentCycle } from "./experiment-runtime.service";
 import type {
   CreateAdminLabWorkspaceInput,
   CreateExperimentProjectInput,
@@ -220,6 +221,7 @@ export async function startExperimentRunForProject(
       status: ExperimentRunStatus.RUNNING,
       hypothesis: input.hypothesis ?? null,
       objective: input.objective ?? null,
+      baselineMetrics: await computeExperimentMetrics(project.id),
       startedAt: new Date(),
     },
   });
@@ -247,7 +249,18 @@ export async function stopExperimentRunForProject(
     data: {
       status: ExperimentRunStatus.STOPPED,
       summary: input.summary ?? null,
+      resultMetrics: await computeExperimentMetrics(project.id),
       finishedAt: new Date(),
     },
   });
+}
+
+export async function triggerAutonomousCycleForProject(
+  userId: string,
+  projectId: string,
+) {
+  await requirePlatformAdmin();
+  await getExperimentProjectForAdmin(userId, projectId);
+
+  return enqueueAutonomousExperimentCycle(projectId);
 }
