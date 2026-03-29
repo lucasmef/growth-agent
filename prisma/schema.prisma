@@ -175,6 +175,7 @@ model Project {
   pillars            ContentPillar[]
   calendarWeeks      CalendarWeek[]
   contentItems       ContentItem[]
+  assets             Asset[]
   analyticsSnapshots AnalyticsSnapshot[]
   agentRuns          AgentRun[]
 

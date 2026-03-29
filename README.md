@@ -15,10 +15,10 @@ Objetivo da V1:
 - `Next.js 16.x`
 - `React 19.2`
 - `TypeScript`
-- `Vercel AI SDK 5`
+- `Vercel AI SDK 6`
 - `Trigger.dev` estável
 - `PostgreSQL`
-- `Prisma`
+- `Prisma 6.x`
 - `bundle.social`
 - `Zod`
 - `Sentry`

@@ -10,7 +10,7 @@ O `Growth Agent` V1 deve ser implementado como um `modular monolith` com dois ru
 Integrações externas:
 
 - `bundle.social`: conexão de contas, scheduling, publishing, analytics, webhooks.
-- provider de IA via `AI SDK 5`.
+- provider de IA via `AI SDK 6`.
 
 Persistência:
 
