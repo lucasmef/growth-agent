@@ -1,57 +1,107 @@
 # Growth Agent
 
-Blueprint inicial do produto SaaS `Growth Agent`.
+![Next.js](https://img.shields.io/badge/Next.js-16.2-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19.2-20232A?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-6.19-2D3748?style=for-the-badge&logo=prisma)
+![Trigger.dev](https://img.shields.io/badge/Trigger.dev-4.4-6D28D9?style=for-the-badge)
+![OpenAI](https://img.shields.io/badge/OpenAI-AI%20SDK%206-111111?style=for-the-badge)
 
-## Objetivo da V1
+Base operacional para um SaaS de growth content com IA, aprovacao humana e automacao de publicacao para Instagram e TikTok.
 
-- planejar estrategia editorial para Instagram e TikTok;
-- gerar ideias e drafts com IA;
-- exigir aprovacao humana em 100% dos posts de clientes;
-- publicar e agendar via `bundle.social`;
-- ingerir analytics via `bundle.social`;
-- otimizar o proximo ciclo de conteudo com base no historico.
+O projeto combina onboarding estrategico, geracao de conteudo, fluxo de aprovacao, publicacao, analytics e um `Admin Lab` para rodar experimentos autonomos e transformar resultados em `Publication Profiles` reutilizaveis.
 
-## Extensao de produto ja prevista
+## O que este projeto entrega
 
-- acesso de `platform admin` para operacao interna;
-- `admin lab` para rodar testes autonomos em contas novas;
-- promocao de testes vencedores para `publication profiles`;
-- clientes escolhendo um perfil operacional pronto para suas contas.
+- onboarding de workspace, projeto e estrategia editorial;
+- dashboard para operacao inicial da conta;
+- geracao de pilares, calendario semanal e drafts com IA;
+- aprovacao manual obrigatoria para projetos de clientes;
+- integracao com `bundle.social` para contas, agendamento, publicacao e analytics;
+- `Admin Lab` para experimentos controlados com `AUTO_APPROVE`;
+- promocao de setups vencedores para `Publication Profiles`;
+- arquitetura modular preparada para escalar sem perder clareza de dominio.
 
-## Stack recomendada
+## Principais funcionalidades
 
-- `Next.js 16.x`
-- `React 19.2`
+### 1. Fluxo cliente
+
+- criacao de `workspace` e `project`;
+- captura de nicho, publico, tom de voz, objetivos e guardrails;
+- configuracao e atualizacao de estrategia;
+- geracao de pilares de conteudo;
+- geracao de calendario editorial semanal;
+- criacao de drafts por slot do calendario;
+- aprovacao, pedido de ajustes, agendamento e publicacao.
+
+### 2. Integracao operacional
+
+- sincronizacao de contas sociais;
+- link para portal de conexao das redes;
+- upload de assets para publicacao;
+- sincronizacao de status de publicacao;
+- ingestao de analytics por rotas e jobs;
+- webhook dedicado para eventos do `bundle.social`.
+
+### 3. Admin Lab
+
+- workspaces internos do tipo `ADMIN_LAB`;
+- projetos em modo `EXPERIMENT`;
+- execucao de ciclos autonomos;
+- acompanhamento de experimentos em andamento;
+- promocao de experimentos para `Publication Profiles`;
+- ranking interno de perfis operacionais vencedores.
+
+## Stack
+
+### Aplicacao
+
+- `Next.js 16`
+- `React 19`
 - `TypeScript`
+- `App Router`
+
+### Backend e dominio
+
+- `Prisma ORM`
+- `SQLite` para bootstrap local rapido
+- `PostgreSQL` para ambientes persistentes
+- `Zod` para contratos e validacao
+
+### IA e automacao
+
+- `AI SDK 6`
+- `@ai-sdk/openai`
+- `Trigger.dev`
+
+### Auth e integracoes
+
 - `Clerk`
-- `Vercel AI SDK 6`
-- `Trigger.dev` estavel
-- `PostgreSQL`
-- `Prisma 6.x`
 - `bundle.social`
-- `Zod`
-- `Sentry`
-- `Vitest` + `Playwright`
 
-## Principios
+## Arquitetura em uma frase
 
-- modular monolith na V1;
-- tudo em TypeScript quando possivel;
-- baixo acoplamento a provider de IA e ao `bundle.social`;
-- separacao explicita entre projetos de cliente e projetos de experimento;
-- jobs idempotentes com retry;
-- logs de decisao e outputs estruturados.
+Um `modular monolith` com separacao clara entre operacao de clientes e experimentacao interna, preservando o guardrail central: projetos reais exigem aprovacao humana explicita antes de qualquer publicacao.
 
-## Estrutura
+## Estrutura do projeto
 
-- [Arquitetura](C:/Users/lucas/OneDrive/Documentos/IA/docs/architecture.md)
-- [ADR 001 - Modular Monolith](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/001-modular-monolith.md)
-- [ADR 002 - Stack](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/002-stack.md)
-- [ADR 003 - Agent Runtime](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/003-agent-runtime.md)
-- [ADR 004 - Admin Lab and Publication Profiles](C:/Users/lucas/OneDrive/Documentos/IA/docs/adr/004-admin-lab-and-publication-profiles.md)
-- [Prisma Schema](C:/Users/lucas/OneDrive/Documentos/IA/prisma/schema.prisma)
+```text
+src/
+  app/             # UI, rotas, server actions e APIs
+  modules/         # dominios de negocio
+  integrations/    # adapters de IA e bundle.social
+  contracts/       # tipos e contratos compartilhados
+  lib/             # env, db e utilitarios
+trigger/
+  jobs/            # jobs assincronos e rotinas operacionais
+prisma/
+  schema*          # modelos e persistencia
+docs/
+  architecture.md  # blueprint da solucao
+  adr/             # decisoes arquiteturais
+```
 
-## Bounded Contexts
+## Modulos de dominio
 
 - `identity`
 - `workspace`
@@ -59,32 +109,63 @@ Blueprint inicial do produto SaaS `Growth Agent`.
 - `strategy`
 - `planning`
 - `content`
-- `approval`
 - `publishing`
 - `analytics`
 - `agent-ops`
 - `admin-lab`
 - `profiles`
 
-## Regra central
+## Como rodar localmente
 
-Projetos de cliente usam `approvalMode = MANUAL_REQUIRED`.
+```bash
+pnpm install
+pnpm db:push
+pnpm db:seed
+pnpm dev
+```
 
-Excecao controlada:
-- projetos internos de experimento, operados por `platform admin` dentro de `workspace.type = ADMIN_LAB`, podem usar `approvalMode = AUTO_APPROVE` para rodar testes autonomos e alimentar `publication profiles`.
+Abra [http://localhost:3000](http://localhost:3000).
 
-## Bootstrap local
+### Variaveis de ambiente
 
-1. Copie [`.env.example`](C:/Users/lucas/OneDrive/Documentos/IA/.env.example) para `.env`.
-2. Rode `pnpm db:push` e depois `pnpm db:seed`.
-3. Suba a app com `pnpm dev`.
+Use o arquivo [`.env.example`](./.env.example) como base.
 
-Modo local sem chaves:
-- `DEV_AUTH_BYPASS=true` libera uma sessao local sem Clerk.
-- `DEV_AUTH_EMAIL` define o usuario local.
-- `PLATFORM_ADMIN_EMAILS` pode apontar para esse mesmo email para liberar o admin lab.
+Atalhos uteis para desenvolvimento local:
 
-O seed cria:
-- um workspace cliente com projeto, estrategia, calendario, conteudo, approval, publication e analytics;
-- um `ADMIN_LAB` com experimento promovido para `PublicationProfile`;
-- um usuario local admin coerente com o modo de desenvolvimento.
+- `DEV_AUTH_BYPASS=true` habilita sessao local sem depender do Clerk;
+- `DEV_AUTH_EMAIL` define o usuario de desenvolvimento;
+- `PLATFORM_ADMIN_EMAILS` libera acesso ao `Admin Lab`;
+- `DATABASE_URL=file:./prisma/dev.db` sobe a base local com SQLite.
+
+## Scripts principais
+
+```bash
+pnpm dev
+pnpm build
+pnpm lint
+pnpm typecheck
+pnpm db:push
+pnpm db:seed
+pnpm trigger:dev
+pnpm trigger:deploy
+```
+
+## Documentacao
+
+- [Arquitetura](./docs/architecture.md)
+- [ADR 001 - Modular Monolith](./docs/adr/001-modular-monolith.md)
+- [ADR 002 - Stack](./docs/adr/002-stack.md)
+- [ADR 003 - Agent Runtime](./docs/adr/003-agent-runtime.md)
+- [ADR 004 - Admin Lab and Publication Profiles](./docs/adr/004-admin-lab-and-publication-profiles.md)
+
+## Diferenciais da base
+
+- guardrails de aprovacao embutidos no dominio;
+- separacao entre conta de cliente e laboratorio de experimentos;
+- publication profiles como ativo reutilizavel de aprendizado;
+- integracoes externas isoladas em adapters;
+- base pronta para evoluir de scaffold para produto operacional.
+
+## Status
+
+O repositorio ja cobre o nucleo da V1 e a fundacao do `Admin Lab`, com UI inicial, APIs, modelos Prisma, seed local e jobs operacionais. O proximo passo natural e aprofundar os fluxos automatizados, observabilidade e maturidade de publicacao em producao.
